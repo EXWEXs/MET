@@ -1,5 +1,4 @@
 MET_CPPFLAGS = -I${top_builddir}/src/basic/vx_cal \
-   -fPIC  \
 	     -I${top_builddir}/src/basic/vx_config \
 	     -I${top_builddir}/src/basic/vx_log \
 	     -I${top_builddir}/src/basic/vx_math \
@@ -78,5 +77,7 @@ MET_LDFLAGS = -L${top_builddir}/src/basic/vx_cal \
 	     -L${top_builddir}/src/libcode/vx_time_series \
 	     -L${top_builddir}/src/libcode/vx_series_data \
 	     -L${top_builddir}/src/libcode/vx_tc_util
+
+#-fPIC  \
 
 ENUM_TO_STRING = ${abs_top_builddir}/src/basic/enum_to_string/enum_to_string

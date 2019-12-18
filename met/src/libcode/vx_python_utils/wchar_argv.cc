@@ -26,6 +26,7 @@ using namespace std;
 #include "wchar_argv.h"
 
 #include "vx_log.h"
+#include "check_endian.h"
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -154,6 +155,7 @@ void Wchar_Argv::set(int _argc, char ** _argv)
 clear();
 
 int j, k;
+size_t n;
 int argv_len;
 int * len = 0;
 
@@ -192,7 +194,7 @@ for (j=0; j<_argc; ++j)  {
 
 W_Buf = new wchar_t [argv_len];
 
-for (j=0; j<Argc; ++j)  {
+for (j=0; j<argv_len; ++j)  {
 
    W_Buf[j] = L'\0';
 
@@ -206,7 +208,9 @@ k = 0;
 
 for (j=0; j<Argc; ++j)  {
 
-   if ( mbstowcs(W_Buf + k, _argv[j], len[j]) == (size_t) -1 )  {
+   n = mbstowcs(W_Buf + k, _argv[j], len[j]);
+
+   if ( n == (size_t) -1 )  {
 
       mlog << Error
            << "\n\n  Wchar_Argv::set() -> mbstowcs failed for string \"" << _argv[j] << "\"\n\n";
