@@ -98,7 +98,7 @@ using namespace std;
 // Constants
 //
 
-static const char * default_config_filename = "MET_BASE/config/PB2NCConfig_default";
+static const char *default_config_filename = "MET_BASE/config/PB2NCConfig_default";
 
 static const char *program_name = "pb2nc";
 static const char *not_assigned = "not_assigned";
@@ -131,6 +131,7 @@ static const int hdr_arr_len    = 3;
 // Observation values length
 static const int obs_arr_len    = 5;
 static const int COUNT_THRESHOLD = 10;
+static const int DEBUG_LOG_LEVEL = 7;
 
 // File unit number for opening the PrepBufr file
 static const int file_unit      = 11;
@@ -370,9 +371,9 @@ static float  derive_grib_code(int, float *, float *, double,
 //void interpolate_pbl_data(int pbl_level, float *pbl_data);
 static int    combine_tqz_and_uv(map<float, float*>,
                                  map<float, float*>, map<float, float*> &);
-static int    interpolate_by_pressure(int length, float *pres_data, float *data_var);
+static int    interpolate_by_pressure(int length, float *pres_data, float *var_data, bool replace_missing);
 static void   interpolate_pqtzuv(float*, float*, float*);
-
+static void   merge_tqz_and_uv(float *, const float[mxr8vt]);
 
 static void   usage();
 static void   set_pbfile(const StringArray &);
@@ -616,11 +617,6 @@ bool is_prepbufr_file(StringArray *events) {
 void get_variable_info(const char* tbl_filename) {
    static const char *method_name = "get_variable_info()";
 
-   FILE * fp;
-   char * line = NULL;
-   size_t len = 0;
-   ssize_t read;
-
    event_names.clear();
    event_members.clear();
    ascii_vars.clear();
@@ -629,13 +625,16 @@ void get_variable_info(const char* tbl_filename) {
    tableB_vars.clear();
    tableB_descs.clear();
 
-   fp = fopen(tbl_filename, "r");
-   ConcatString input_data;
+   FILE *fp = fopen(tbl_filename, "r");
    if (fp != NULL) {
+      ssize_t read;
+      size_t len = 0;
+      char * line = NULL;
       char var_name[BUFR_NAME_LEN+1];
       char var_desc[max(BUFR_DESCRIPTION_LEN,BUFR_SEQUENCE_LEN)+1];
       char var_unit_str[BUFR_UNIT_LEN+1];
       bool find_mnemonic = false;
+      ConcatString input_data;
 
       // Processing section 1
       int var_count1 = 0;
@@ -697,7 +696,7 @@ void get_variable_info(const char* tbl_filename) {
          event_names.add(var_name);
          event_members.add(var_desc);
       }
-      read = getline(&line, &len, fp);
+      getline(&line, &len, fp); // skip a line
 
       // Processing section 3
       while ((read = getline(&line, &len, fp)) != -1) {
@@ -960,7 +959,6 @@ void process_pbfile(int i_pb) {
    // To compute PBL
    int pbl_level;
    int pbl_code = -1;
-   int pbl_buf_level, prev_pbl_level;
    float pbl_p, pbl_h, pbl_qm;
 
    bool cal_cape = bufr_obs_name_arr.has(derived_cape, cape_code);
@@ -968,7 +966,7 @@ void process_pbfile(int i_pb) {
 
    bool     is_same_header;
    unixtime prev_hdr_vld_ut;
-   float    prev_quality_mark;
+   //float    prev_quality_mark;
    char     prev_hdr_typ[max_str_len], prev_hdr_sid[max_str_len];
    double   prev_hdr_lat, prev_hdr_lon, prev_hdr_elv;
    map<float, float*> pqtzuv_map_tq;
@@ -978,8 +976,8 @@ void process_pbfile(int i_pb) {
       is_same_header = false;
       prev_hdr_vld_ut = -1;
       prev_hdr_lat = prev_hdr_lon = prev_hdr_elv = -9999;
-      strncpy(prev_hdr_typ, not_assigned, sizeof(not_assigned));
-      strncpy(prev_hdr_sid, not_assigned, sizeof(not_assigned));
+      strncpy(prev_hdr_typ, not_assigned, strlen(not_assigned));
+      strncpy(prev_hdr_sid, not_assigned, strlen(not_assigned));
    }
 
    IMM = JMM =1;
@@ -1296,40 +1294,22 @@ void process_pbfile(int i_pb) {
 
       if (cal_pbl) {
          pbl_level = 0;
-         if (i_read > 0) {
-            is_same_header = (prev_hdr_vld_ut == hdr_vld_ut)
-                  && is_eq(prev_hdr_lat, hdr_lat)
-                  && is_eq(prev_hdr_lon, hdr_lon)
-                  && is_eq(prev_hdr_elv, hdr_elv)
-                  && 0 == strcmp(prev_hdr_typ, hdr_typ)
-                  && 0 == strcmp(prev_hdr_sid, hdr_sid.c_str());
-            if (!is_same_header) {
-               float pbl_value = compute_pbl(pqtzuv_map_tq, pqtzuv_map_uv);
-               obs_arr[1] = pbl_code;
-               obs_arr[2] = pbl_p;
-               obs_arr[3] = pbl_h;
-               obs_arr[4] = pbl_value - hdr_elv; // observation value
-               mlog << Debug(7) << " hpbl: " << pbl_value << ", obs_arr[4]: " << obs_arr[4]
-                    << "   lat: " << prev_hdr_lat << ", lon: " << prev_hdr_lon
-                    << ", elv: " << prev_hdr_elv << " valid_time: "
-                    << unix_to_yyyymmdd_hhmmss(prev_hdr_vld_ut)
-                    << " " << prev_hdr_typ << " " << prev_hdr_sid << "\n\n" ;
-               if (obs_arr[4] > MAX_PBL) obs_arr[4] = MAX_PBL;
-
-               addObservation(obs_arr, (string)prev_hdr_typ, (string)prev_hdr_sid, prev_hdr_vld_ut,
-                              prev_hdr_lat, prev_hdr_lon, prev_hdr_elv, pbl_qm,
-                              OBS_BUFFER_SIZE);
-
-               std::map<float,float*>::iterator it;
-               for (it=pqtzuv_map_tq.begin(); it!=pqtzuv_map_tq.end(); ++it) {
-                  delete it->second;
-               }
-               for (it=pqtzuv_map_uv.begin(); it!=pqtzuv_map_uv.end(); ++it) {
-                  delete it->second;
-               }
-               pqtzuv_map_tq.clear();
-               pqtzuv_map_uv.clear();
+         is_same_header = (prev_hdr_vld_ut == hdr_vld_ut)
+               && is_eq(prev_hdr_lat, hdr_lat)
+               && is_eq(prev_hdr_lon, hdr_lon)
+               && is_eq(prev_hdr_elv, hdr_elv)
+               && 0 == strcmp(prev_hdr_typ, hdr_typ)
+               && 0 == strcmp(prev_hdr_sid, hdr_sid.c_str());
+         if (!is_same_header) {
+            std::map<float,float*>::iterator it;
+            for (it=pqtzuv_map_tq.begin(); it!=pqtzuv_map_tq.end(); ++it) {
+               delete it->second;
             }
+            for (it=pqtzuv_map_uv.begin(); it!=pqtzuv_map_uv.end(); ++it) {
+               delete it->second;
+            }
+            pqtzuv_map_tq.clear();
+            pqtzuv_map_uv.clear();
          }
       }
 
@@ -1456,7 +1436,6 @@ void process_pbfile(int i_pb) {
 
             if(!is_eq(obs_arr[4], fill_value)) {
                // Convert pressure from millibars to pascals
-               bool is_cape_input = false;
                if(grib_code == pres_grib_code) {
                   obs_arr[4] *= pa_per_mb;
                }
@@ -1470,6 +1449,7 @@ void process_pbfile(int i_pb) {
                }
 
                if (cal_cape) {
+                  bool is_cape_input = false;
                   if(grib_code == pres_grib_code) {
                      is_cape_input = true;
                      if (cape_level < MAX_CAPE_LEVEL) cape_data_pres[cape_level] = obs_arr[4];
@@ -1566,6 +1546,7 @@ void process_pbfile(int i_pb) {
             if (cape_member_cnt >= 3) cape_level++;
          }
          if (cal_pbl && !is_eq(pqtzuv[0], bad_data_float)) {
+            bool has_pbl_input = false;
             float *tmp_pqtzuv = new float[mxr8vt];
             for(kk=0; kk<mxr8vt; kk++) {
                tmp_pqtzuv[kk] = pqtzuv[kk];
@@ -1574,12 +1555,15 @@ void process_pbfile(int i_pb) {
             if (!is_eq(tmp_pqtzuv[4],bad_data_float)
                   && !is_eq(tmp_pqtzuv[5],bad_data_float)) {
                pqtzuv_map_uv[pqtzuv[0]] = tmp_pqtzuv;
+               has_pbl_input = true;
             }
-            else if (!is_eq(tmp_pqtzuv[2],bad_data_float)
+            if (!is_eq(tmp_pqtzuv[2],bad_data_float)
                   && (!is_eq(tmp_pqtzuv[1],bad_data_float) || ignore_Q_PBL)
                   && (!is_eq(tmp_pqtzuv[3],bad_data_float) || ignore_Z_PBL)) {
                pqtzuv_map_tq[pqtzuv[0]] = tmp_pqtzuv;
+               has_pbl_input = true;
             }
+            if (has_pbl_input) pbl_level++;
          }
       } // end for lv
 
@@ -1594,15 +1578,13 @@ void process_pbfile(int i_pb) {
             if (cape_level > MAX_CAPE_LEVEL) cape_level = MAX_CAPE_LEVEL;
             reverse_levels = (cape_data_pres[0] > cape_data_pres[cape_level-1]);
             if (reverse_levels) {
-               int buf_idx;
-               float swap_value;
                mlog << Debug(5) << method_name << " Reverse levels\n";
                mlog << Debug(7) << method_name << "   pres[0]: " << cape_data_pres[0]
                     << ", pres[" << (cape_level-1) << "]: "
                     << cape_data_pres[cape_level-1] << "\n";
                for (int idx=0; idx<(cape_level+1)/2; idx++) {
-                  buf_idx = cape_level - idx - 1;
-                  swap_value = cape_data_pres[idx];
+                  int buf_idx = cape_level - idx - 1;
+                  float swap_value = cape_data_pres[idx];
                   cape_data_pres[idx] = cape_data_pres[buf_idx];
                   cape_data_pres[buf_idx] = swap_value;
          
@@ -1674,6 +1656,36 @@ void process_pbfile(int i_pb) {
          }
          else if (1 < buf_nlev) cape_cnt_no_levels++;
          else cape_cnt_surface_msgs++;
+      }
+
+      if (cal_pbl && pqtzuv_map_tq.size() > 0 && pqtzuv_map_uv.size() > 0 ) {
+         float pbl_value = compute_pbl(pqtzuv_map_tq, pqtzuv_map_uv);
+         if (!is_eq(pbl_value, bad_data_float)) {
+            obs_arr[1] = pbl_code;
+            obs_arr[2] = pbl_p;
+            obs_arr[3] = pbl_h;
+            obs_arr[4] = pbl_value - hdr_elv; // observation value
+            mlog << Debug(7) << " hpbl: " << pbl_value << ", obs_arr[4]: " << obs_arr[4]
+                 << "   lat: " << hdr_lat << ", lon: " << hdr_lon
+                 << ", elv: " << hdr_elv << " valid_time: "
+                 << unix_to_yyyymmdd_hhmmss(hdr_vld_ut)
+                 << " " << hdr_typ << " " << hdr_sid << "\n\n" ;
+            if (obs_arr[4] > MAX_PBL) obs_arr[4] = MAX_PBL;
+            
+            addObservation(obs_arr, (string)hdr_typ, (string)hdr_sid, hdr_vld_ut,
+                           hdr_lat, hdr_lon, hdr_elv, pbl_qm,
+                           OBS_BUFFER_SIZE);
+         }
+
+         std::map<float,float*>::iterator it;
+         for (it=pqtzuv_map_tq.begin(); it!=pqtzuv_map_tq.end(); ++it) {
+            delete it->second;
+         }
+         for (it=pqtzuv_map_uv.begin(); it!=pqtzuv_map_uv.end(); ++it) {
+            delete it->second;
+         }
+         pqtzuv_map_tq.clear();
+         pqtzuv_map_uv.clear();
       }
 
       //if (do_all_vars) {
@@ -1815,7 +1827,7 @@ void process_pbfile(int i_pb) {
          prev_hdr_lat = hdr_lat;
          prev_hdr_lon = hdr_lon;
          prev_hdr_elv = hdr_elv;
-         prev_quality_mark = quality_mark;
+         //prev_quality_mark = quality_mark;
          strncpy(prev_hdr_typ, hdr_typ, strlen(not_assigned));
          strncpy(prev_hdr_sid, hdr_sid.c_str(), strlen(not_assigned));
       }
@@ -1837,21 +1849,23 @@ void process_pbfile(int i_pb) {
       }
    } // end for i_read
 
-   if (cal_pbl) {
+   if (cal_pbl && pqtzuv_map_tq.size() > 0 && pqtzuv_map_uv.size() > 0 ) {
       float pbl_value = compute_pbl(pqtzuv_map_tq, pqtzuv_map_uv);
-      obs_arr[1] = pbl_code;
-      obs_arr[2] = pbl_p;
-      obs_arr[3] = pbl_h;
-      obs_arr[4] = pbl_value - hdr_elv; // observation value
-      mlog << Debug(7) << "hpbl: " << pbl_value << ", obs_arr[4]: " << obs_arr[4]
-           << "   lat: " << prev_hdr_lat << ", lon: " << prev_hdr_lon
-           << ", elv: " << prev_hdr_elv << " valid_time: "
-           << unix_to_yyyymmdd_hhmmss(prev_hdr_vld_ut)
-           << " " << prev_hdr_typ << " " << prev_hdr_sid << "\n\n" ;
-      if (obs_arr[4] > MAX_PBL) obs_arr[4] = MAX_PBL;
-
-      addObservation(obs_arr, (string)hdr_typ, (string)hdr_sid, hdr_vld_ut,
-                     hdr_lat, hdr_lon, hdr_elv, pbl_qm, OBS_BUFFER_SIZE);
+      if (!is_eq(pbl_value, bad_data_float)) {
+         obs_arr[1] = pbl_code;
+         obs_arr[2] = pbl_p;
+         obs_arr[3] = pbl_h;
+         obs_arr[4] = pbl_value - hdr_elv; // observation value
+         mlog << Debug(7) << " hpbl: " << pbl_value << ", obs_arr[4]: " << obs_arr[4]
+              << "   lat: " << hdr_lat << ", lon: " << hdr_lon
+              << ", elv: " << hdr_elv << " valid_time: "
+              << unix_to_yyyymmdd_hhmmss(hdr_vld_ut)
+              << " " << hdr_typ << " " << hdr_sid << "\n\n" ;
+         if (obs_arr[4] > MAX_PBL) obs_arr[4] = MAX_PBL;
+         
+         addObservation(obs_arr, (string)hdr_typ, (string)hdr_sid, hdr_vld_ut,
+                        hdr_lat, hdr_lon, hdr_elv, pbl_qm, OBS_BUFFER_SIZE);
+      }
       //insert_pbl();
       std::map<float,float*>::iterator it;
       for (it=pqtzuv_map_tq.begin(); it!=pqtzuv_map_tq.end(); ++it) {
@@ -2370,14 +2384,14 @@ void write_netcdf_hdr_data() {
    long dim_count, pb_hdr_count;
    bool is_prepbufr = is_prepbufr_file(&event_names);
    static const string method_name = "\nwrite_netcdf_hdr_data()";
+   int deflate_level = compress_level;
+   if (deflate_level < 0) deflate_level = conf_info.conf.nc_compression();
 
    pb_hdr_count = (long) get_nc_hdr_cur_index();
    if (obs_to_vector) {
-      int deflate_level = compress_level;
-      if (deflate_level < 0) deflate_level = conf_info.conf.nc_compression();
 
       nc_out_data.processed_hdr_cnt = pb_hdr_count;
-      nc_out_data.deflate_level = compress_level;
+      nc_out_data.deflate_level = deflate_level;
       nc_out_data.observations = observations;
       nc_out_data.summary_obs = summary_obs;
       nc_out_data.summary_info = conf_info.getSummaryInfo();
@@ -2410,10 +2424,8 @@ void write_netcdf_hdr_data() {
       exit(1);
    }
 
-   int deflate_level = compress_level;
-   if (deflate_level < 0) deflate_level = conf_info.conf.nc_compression();
    if (is_prepbufr) {
-      if (!nc_out_data.summary_info.flag || (nc_out_data.summary_info.flag && nc_out_data.summary_info.raw_data))
+      if (!nc_out_data.summary_info.flag || nc_out_data.summary_info.raw_data)
          create_nc_pb_hdrs(obs_vars, f_out, pb_hdr_count, deflate_level);
    }
 
@@ -2536,7 +2548,7 @@ void addObservation(const float *obs_arr, const ConcatString &hdr_typ,
       if (do_summary) {
          int var_index = obs_arr[1];
          string var_name = bufr_obs_name_arr[var_index];
-         TimeSummaryInfo summaryInfo = conf_info.getSummaryInfo();
+         conf_info.getSummaryInfo();
          summary_obs->addObservation(
                hdr_typ.text(),
                hdr_sid.text(),
@@ -2565,7 +2577,7 @@ void clean_up() {
 ////////////////////////////////////////////////////////////////////////
 
 int get_event_index(int flag, int i_var, int i_lvl) {
-   int ev, i;
+   int ev;
 
    ev = 0;
    // Check the event_stack_flag to determine if the top or bottom
@@ -2573,6 +2585,7 @@ int get_event_index(int flag, int i_var, int i_lvl) {
    //   Top of the stack:    ev = 0
    //   Bottom of the stack: ev > 0
    if(!flag) {
+      int i;
       // If the bottom of the event stack is to be used, find the
       // correct event index
 
@@ -2610,14 +2623,13 @@ int get_event_index(int flag, int i_var, int i_lvl) {
 ////////////////////////////////////////////////////////////////////////
 
 int get_event_index_temp(int flag, int i_var, int i_lvl) {
-   int ev, i;
+   // Initialize to the top of the event stack
+   int ev = 0;
 
    // For the top of the event stack, search the entire stack looking
    // for the VIRTMP program code.  If found, use the next entry.
    if(flag) {
-
-      // Initialize to the top of the event stack
-      ev = 0;
+      int i;
 
       // Loop through the event stack
       for(i=0; i<mxr8vn && evns[i_var][i][i_lvl][0]<r8bfms; i++) {
@@ -2843,13 +2855,13 @@ void display_bufr_variables(const StringArray &all_vars, const StringArray &all_
       if (0 < variableTypeMap.count(obs_arr[i])) {
          StringArray typeArray = variableTypeMap[obs_arr[i]];
          int type_cnt = typeArray.n_elements();
-         char message_types[(BUFR_DESCRIPTION_LEN+1)*(type_cnt+1)];
-         message_types[0] = '\0';
+         //char message_types[(BUFR_DESCRIPTION_LEN+1)*(type_cnt+1)];
+         ostringstream buf;
          for (int ii=0; ii<type_cnt; ii++) {
-            if (strlen(message_types) < (sizeof(message_types) - 1)) snprintf(message_types, sizeof(message_types), "%s ", message_types);
-            snprintf(message_types, sizeof(message_types), "%s%s", message_types, typeArray[ii].c_str());
+            if (0 < ii) buf << " ";
+            buf << typeArray[ii];
          }
-         line_buf.format("   %8s: %-48s\t\ttypes: %s\n", obs_arr[i].c_str(), description.c_str(), message_types);
+         line_buf.format("   %8s: %-48s\t\ttypes: %s\n", obs_arr[i].c_str(), description.c_str(), buf.str().c_str());
       }
       else {
          line_buf.format("   %8s: %s\n", obs_arr[i].c_str(), description.c_str());
@@ -2860,8 +2872,83 @@ void display_bufr_variables(const StringArray &all_vars, const StringArray &all_
 
 ////////////////////////////////////////////////////////////////////////
 
+//bool has_all_valid_data(float *pqtzuv) {
+//   bool result = true;
+//   for (int idx=0; idx<mxr8vt; idx++) {
+//      if (is_eq(pqtzuv[idx], bad_data_float)) {
+//         result = false;
+//         break;
+//      }
+//   }
+//   //cout << "   has_all_valid_data " <<result<<"\n";
+//   return result;
+//}
+
+////////////////////////////////////////////////////////////////////////
+
+void print_raw_data(int debug_log_level, const char *method_name,
+                    map<float, float*> pqtzuv_map_tq,
+                    map<float, float*> pqtzuv_map_uv) {
+   float *pqtzuv;
+   ostringstream buf;
+   std::map<float,float*>::iterator it;
+   int tq_count = pqtzuv_map_tq.size();
+   int uv_count = pqtzuv_map_uv.size();
+   
+   buf << method_name << "Raw input QTZ (" << tq_count << "):\n";
+   for (it=pqtzuv_map_tq.begin(); it!=pqtzuv_map_tq.end(); ++it) {
+      pqtzuv = it->second;
+      buf << "\tTQZ:";
+      for (int idx=0; idx<mxr8vt; idx++) {
+         buf << "\t" << pqtzuv[idx];
+      }
+      buf << "\n";
+   }
+   buf << method_name << "Raw input UV(" << uv_count << "):\n";
+   for (it=pqtzuv_map_uv.begin(); it!=pqtzuv_map_uv.end(); ++it) {
+      buf << "\tUV:";
+      pqtzuv = it->second;
+      for (int idx=0; idx<mxr8vt; idx++) {
+         buf << "\t" << pqtzuv[idx];
+      }
+      buf << "\n";
+   }
+   mlog << Debug(debug_log_level) << buf.str() << "\n";
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void print_merged_data(int debug_log_level, const char *method_name,
+                       map<float, float*> pqtzuv_map_tq,
+                       map<float, float*> pqtzuv_map_uv,
+                       map<float, float*> pqtzuv_map_merged) {
+   ostringstream buf;
+   std::map<float,float*>::iterator it;
+   buf << method_name << "TQZ and UV merged (" << pqtzuv_map_merged.size() << "):\n";
+   for (it=pqtzuv_map_merged.begin(); it!=pqtzuv_map_merged.end(); ++it) {
+      float cur_pres, *pqtzuv;
+      buf << "\tmerged";
+      cur_pres = it->first;
+      pqtzuv = it->second;
+      for (int idx=0; idx<mxr8vt; idx++) {
+         buf << "\t" << pqtzuv[idx];
+      }
+      if (0 < (pqtzuv_map_tq.count(cur_pres) + pqtzuv_map_uv.count(cur_pres))) {
+         buf << "\t( ";
+         if (0 < pqtzuv_map_tq.count(cur_pres)) buf << "tqz ";
+         if (0 < pqtzuv_map_uv.count(cur_pres)) buf << "uv ";
+         buf << " )";
+      }
+      buf << "\n";
+   }
+   mlog << Debug(debug_log_level) << buf.str() << "\n";
+}
+
+////////////////////////////////////////////////////////////////////////
+
 int combine_tqz_and_uv(map<float, float*> pqtzuv_map_tq,
-      map<float, float*> pqtzuv_map_uv, map<float, float*> &pqtzuv_map_merged) {
+                       map<float, float*> pqtzuv_map_uv,
+                       map<float, float*> &pqtzuv_map_merged) {
    int tq_count = 0;
    int uv_count = 0;
    int common_count = 0;
@@ -2871,122 +2958,116 @@ int combine_tqz_and_uv(map<float, float*> pqtzuv_map_tq,
    uv_count = pqtzuv_map_uv.size();
    if (tq_count > 0 && uv_count > 0) {
       NumArray common_pres_array;
-      float first_pres, prev_pres, cur_pres, next_pres;
-      float *pqtzuv_tq, *pqtzuv_uv;
-      float *cur_pqtzuv, *first_pqtzuv, *next_pqtzuv, *prev_pqtzuv;
+      float cur_pres_tq, next_pres_tq;
+      float cur_pres_uv, next_pres_uv;
+      float *cur_pqtzuv_tq, *prev_pqtzuv_tq, *next_pqtzuv_tq;
+      float *cur_pqtzuv_uv, *prev_pqtzuv_uv, *next_pqtzuv_uv;
       std::map<float,float*>::iterator it_tq, it_uv;
+      const std::map<float,float*>::iterator it_tq_begin = pqtzuv_map_tq.begin();
+      const std::map<float,float*>::iterator it_uv_begin = pqtzuv_map_uv.begin();
+      const std::map<float,float*>::iterator it_tq_end = pqtzuv_map_tq.end();
+      const std::map<float,float*>::iterator it_uv_end = pqtzuv_map_uv.end();
 
-      first_pres = bad_data_float;
-      it_tq = pqtzuv_map_tq.begin();
-      it_uv = pqtzuv_map_uv.begin();
-      pqtzuv_tq = (float *)it_tq->second;
-      pqtzuv_uv = (float *)it_uv->second;;
-      if (it_tq->first == it_uv->first) {
-         first_pres = it_tq->first;
-         for (int idx=1; idx<mxr8vt; idx++) {
-            if (is_eq(pqtzuv_tq[idx], bad_data_float)) {
-               pqtzuv_tq[idx] = pqtzuv_uv[idx];
+      if(mlog.verbosity_level() >= DEBUG_LOG_LEVEL) {
+         print_raw_data(DEBUG_LOG_LEVEL, method_name,
+                        pqtzuv_map_tq, pqtzuv_map_uv);
+      }
+      
+      it_tq = it_tq_begin;
+      it_uv = it_uv_begin;
+      cur_pres_tq = it_tq->first;
+      cur_pres_uv = it_uv->first;
+      cur_pqtzuv_tq = prev_pqtzuv_tq = it_tq->second;
+      cur_pqtzuv_uv = prev_pqtzuv_uv = it_uv->second;
+      
+      if (cur_pres_tq > cur_pres_uv) {
+         while (it_uv != it_uv_end) {
+            ++it_uv;
+            cur_pres_uv = it_uv->first;
+            cur_pqtzuv_uv = it_uv->second;
+            if (cur_pres_tq == cur_pres_uv) break;
+            else if (cur_pres_tq < cur_pres_uv) {
+               cur_pqtzuv_uv = it_uv->second;
+               interpolate_pqtzuv(prev_pqtzuv_uv, cur_pqtzuv_tq, cur_pqtzuv_uv);
+               pqtzuv_map_merged[cur_pres_tq] = cur_pqtzuv_tq;
+               break;
             }
+            prev_pqtzuv_uv = cur_pqtzuv_uv;
          }
-         pqtzuv_map_merged[first_pres] = pqtzuv_tq;
-         first_pqtzuv = pqtzuv_tq;
       }
-      else {
-         if (it_tq->first > it_uv->first) {
-            first_pres = it_tq->first;
-            prev_pqtzuv = pqtzuv_uv;
-            cur_pqtzuv  = pqtzuv_tq;
-            next_pqtzuv = ++it_uv->second;
+      else if (cur_pres_tq < cur_pres_uv) {
+         cur_pres_tq = it_tq->first;
+         cur_pqtzuv_tq = it_tq->second;
+         while (it_tq != it_tq_end) {
+            ++it_tq;
+            if (cur_pres_uv == cur_pres_tq) break;
+            else if (cur_pres_uv < cur_pres_tq) {
+               interpolate_pqtzuv(prev_pqtzuv_tq, cur_pqtzuv_uv, cur_pqtzuv_tq);
+               pqtzuv_map_merged[cur_pres_uv] = cur_pqtzuv_uv;
+               break;
+            }
+            prev_pqtzuv_tq = cur_pqtzuv_tq;
          }
-         else {
-            first_pres = it_uv->first;
-            prev_pqtzuv = pqtzuv_tq;
-            next_pqtzuv = ++it_tq->second;
-         }
-         interpolate_pqtzuv(prev_pqtzuv, cur_pqtzuv, next_pqtzuv);
-         pqtzuv_map_merged[first_pres] = cur_pqtzuv;
-         first_pqtzuv = cur_pqtzuv;
       }
 
-      prev_pres = first_pres;
-      prev_pqtzuv = first_pqtzuv;
-      it_uv = pqtzuv_map_uv.begin();
-      for (it_tq=pqtzuv_map_tq.begin(); it_tq!=pqtzuv_map_tq.end(); ++it_tq) {
-         cur_pres = (float)it_tq->first;
-         // Skip the record with missing values
-         if (prev_pres > cur_pres) continue;
-
-         cur_pqtzuv = (float *)it_tq->second;
-         if (0 < pqtzuv_map_uv.count(cur_pres)) {
-            common_count++;
-            pqtzuv_uv = (float *)pqtzuv_map_uv[cur_pres];
-            common_pres_array.add(cur_pres);
-            for (int idx=1; idx<mxr8vt; idx++) {
-               if (is_eq(cur_pqtzuv[idx], bad_data_float)) {
-                  cur_pqtzuv[idx] = pqtzuv_uv[idx];
+      while (it_tq != it_tq_end && it_uv != it_uv_end) {
+         cur_pres_tq = it_tq->first;
+         cur_pres_uv = it_uv->first;
+         cur_pqtzuv_tq = it_tq->second;
+         cur_pqtzuv_uv = it_uv->second;
+         if (cur_pres_tq == cur_pres_uv) {
+            merge_tqz_and_uv(cur_pqtzuv_tq, cur_pqtzuv_uv);
+            pqtzuv_map_merged[cur_pres_tq] = cur_pqtzuv_tq;
+            prev_pqtzuv_tq = cur_pqtzuv_tq;
+            prev_pqtzuv_uv = cur_pqtzuv_uv;
+            ++it_uv;
+            ++it_tq;
+            if (it_tq->first > it_uv->first) --it_tq;
+            else if (it_tq->first < it_uv->first) --it_uv;
+            continue;
+         }
+         else if (cur_pres_tq > cur_pres_uv) {
+            ++it_uv;
+            next_pres_uv = it_uv->first;
+            next_pqtzuv_uv = it_uv->second;
+            prev_pqtzuv_tq = cur_pqtzuv_tq;
+            while (it_tq != it_tq_end) {
+               cur_pres_tq = it_tq->first;
+               cur_pqtzuv_tq = it_tq->second;
+               if (cur_pres_tq == next_pres_uv) break;
+               if (cur_pres_tq > next_pres_uv) {
+                  --it_tq;
+                  break;
                }
+               interpolate_pqtzuv(cur_pqtzuv_uv, cur_pqtzuv_tq, next_pqtzuv_uv);
+               pqtzuv_map_merged[cur_pres_tq] = cur_pqtzuv_tq;
+               ++it_tq;
             }
          }
-         else {
-            // Advance UV record if necessary
-            if (it_uv->first < cur_pres) {
-               for (; it_uv!=pqtzuv_map_uv.end(); ++it_uv) {
-                  if (it_uv->first > cur_pres) break;
+         else { //(cur_pres_tq < cur_pres_uv)
+            ++it_tq;
+            next_pres_tq  = it_tq->first;
+            next_pqtzuv_tq  = it_tq->second;
+            prev_pqtzuv_uv = cur_pqtzuv_uv;
+            while (it_uv != it_uv_end) {
+               cur_pres_uv = it_uv->first;
+               cur_pqtzuv_uv = it_uv->second;
+               if (cur_pres_uv == next_pres_tq) break;
+               if (cur_pres_uv > next_pres_tq) {
+                  --it_uv;
+                  break;
                }
-               //Stop if no more UV records
-               if (it_uv->first < cur_pres) break;
+               interpolate_pqtzuv(cur_pqtzuv_tq, cur_pqtzuv_uv, next_pqtzuv_tq);
+               pqtzuv_map_merged[cur_pres_uv] = cur_pqtzuv_uv;
+               prev_pqtzuv_uv = cur_pqtzuv_uv;
+               ++it_uv;
             }
-            next_pqtzuv = it_uv->second;
-            interpolate_pqtzuv(prev_pqtzuv, cur_pqtzuv, next_pqtzuv);
          }
-         pqtzuv_map_merged[cur_pres] = cur_pqtzuv;
-         prev_pres = cur_pres;
-         prev_pqtzuv = cur_pqtzuv;
-      }
-
-      prev_pres = first_pres;
-      prev_pqtzuv = first_pqtzuv;
-      it_tq = pqtzuv_map_tq.begin();
-      for (it_uv=pqtzuv_map_uv.begin(); it_uv!=pqtzuv_map_uv.end(); ++it_uv) {
-         cur_pres = (float)it_uv->first;
-         // Skip the record with missing values
-         if (prev_pres > cur_pres) continue;
-         if (0 < pqtzuv_map_merged.count(cur_pres)) continue;
-
-         cur_pqtzuv = (float *)it_uv->second;
-         // Advance UV record if necessary
-         if (it_tq->first < cur_pres) {
-            for (; it_tq!=pqtzuv_map_tq.end(); ++it_tq) {
-               if (it_tq->first > cur_pres) break;
-            }
-            //Stop if no more TQZ records
-            if (it_tq->first < cur_pres) break;
-         }
-         next_pqtzuv = it_tq->second;
-         interpolate_pqtzuv(prev_pqtzuv, cur_pqtzuv, next_pqtzuv);
-         pqtzuv_map_merged[cur_pres] = cur_pqtzuv;
-         prev_pres = cur_pres;
-         prev_pqtzuv = cur_pqtzuv;
       }
    }
-
-   if(mlog.verbosity_level() >= 7) {
-      for (std::map<float,float*>::iterator it=pqtzuv_map_merged.begin();
-            it!=pqtzuv_map_merged.end(); ++it) {
-         float *pqtzuv = it->second;
-         ostringstream buf;
-         buf << method_name << "TQZ and UV merged ";
-         for (int idx=0; idx<mxr8vt; idx++) {
-           buf << "  " << pqtzuv[idx];
-         }
-         if (0 < (pqtzuv_map_tq.count(it->first) + pqtzuv_map_tq.count(it->first))) {
-            buf << "   (";
-            if (0 < pqtzuv_map_tq.count(it->first)) buf << " tqz";
-            if (0 < pqtzuv_map_uv.count(it->first)) buf << " uv";
-            buf << " )";
-         }
-         mlog << Debug(7) << buf.str() << "\n";
-      }
+   if(mlog.verbosity_level() >= DEBUG_LOG_LEVEL) {
+      print_merged_data(DEBUG_LOG_LEVEL, method_name,
+                        pqtzuv_map_tq, pqtzuv_map_uv,pqtzuv_map_merged);
    }
 
    return pqtzuv_map_merged.size();
@@ -2999,116 +3080,256 @@ float compute_pbl(map<float, float*> pqtzuv_map_tq,
    int jpbl;        //       -      BOUNDARY-LAYER TOP (LEVEL NUMBER - INTEGER)
    int mzbl;        //       -      TOP OF MODEL DOMAIN (LEVEL NUMBER - INTEGER)
    float hpbl;      //       M      ATMOSPHERIC BOUNDARY-LAYER DEPTH
-   int index;
-   int pbl_level = 0;
-   int tq_count = 0;
-   int uv_count = 0;
-   int pbl_diff_count = 0;
+   int tq_count = pqtzuv_map_tq.size();
+   int uv_count = pqtzuv_map_uv.size();
    static const char *method_name = "compute_pbl() ";
 
    hpbl = bad_data_float;
-   tq_count = pqtzuv_map_tq.size();
-   uv_count = pqtzuv_map_uv.size();
    mlog << Debug(7) << method_name << "is called: TQZ: "
         << tq_count << "  UV: " << uv_count << "\n";
    if (tq_count > 0 || uv_count > 0) {
+      int pbl_level;
       int hgt_cnt, spfh_cnt;
 
       map<float, float*> pqtzuv_map_merged;
       pbl_level = combine_tqz_and_uv(pqtzuv_map_tq, pqtzuv_map_uv, pqtzuv_map_merged);
+      const int max_pbl_level = min(pbl_level, MAX_PBL_LEVEL);
+
       mlog << Debug(7) << method_name << "pbl_level= " << pbl_level << "\n";
 
       // Order all observations by pressure from bottom to top
-      index = pbl_level - 1;
-      if (index >= MAX_PBL_LEVEL) index = MAX_PBL_LEVEL - 1;
+      int index = pbl_level - 1;
+      if (pbl_level > MAX_PBL_LEVEL) {
+         mlog << Warning << "\n" << method_name << " -> Ignored levels (from "
+              << pbl_level << " to " << MAX_PBL_LEVEL << ")\n\n";
+      }
       hgt_cnt = spfh_cnt = 0;
       for (std::map<float,float*>::iterator it=pqtzuv_map_merged.begin();
             it!=pqtzuv_map_merged.end(); ++it) {
-         float *pqtzuv = it->second;
-         if (index < 0) {
-            mlog << Error << method_name  << "negative index: " << index << "\n";
-            break;
+         if (index < MAX_PBL_LEVEL) {
+            if (index < 0) {
+               mlog << Error << method_name  << "negative index: " << index << "\n";
+               break;
+            }
+            
+            float *pqtzuv = it->second;
+            pbl_data_pres[index] = pqtzuv[0];
+            pbl_data_spfh[index] = pqtzuv[1];
+            pbl_data_temp[index] = pqtzuv[2];
+            pbl_data_hgt [index] = pqtzuv[3];
+            pbl_data_ugrd[index] = pqtzuv[4];
+            pbl_data_vgrd[index] = pqtzuv[5];
+            if (!is_eq(pbl_data_spfh[index], bad_data_float)) spfh_cnt++;
+            if (!is_eq( pbl_data_hgt[index], bad_data_float))  hgt_cnt++;
          }
-
-         pbl_data_pres[index] = pqtzuv[0];
-         pbl_data_spfh[index] = pqtzuv[1];
-         pbl_data_temp[index] = pqtzuv[2];
-         pbl_data_hgt[index]  = pqtzuv[3];
-         pbl_data_ugrd[index] = pqtzuv[4];
-         pbl_data_vgrd[index] = pqtzuv[5];
-         if (!is_eq(pbl_data_spfh[index], bad_data_float)) spfh_cnt++;
-         if (!is_eq(pbl_data_hgt[index], bad_data_float)) hgt_cnt++;
-
          index--;
       }
-
-      if (hgt_cnt < pbl_level) {
-         hgt_cnt += interpolate_by_pressure(pbl_level, pbl_data_pres, pbl_data_hgt);
-         mlog << Debug(4) << method_name << "interpolate Z (HGT)\n";
+      if (index >= 0) {
+         mlog << Error << method_name  << "Missing veritical levels (" << (index+1) << ")\n";
       }
-      if (spfh_cnt < pbl_level) {
-         spfh_cnt += interpolate_by_pressure(pbl_level, pbl_data_pres, pbl_data_spfh);
-         mlog << Debug(4) << method_name << "interpolate Q (SPFH)\n";
+      for (index=max_pbl_level; index<MAX_PBL_LEVEL; index++) {
+         pbl_data_pres[index] = bad_data_float;
+         pbl_data_spfh[index] = bad_data_float;
+         pbl_data_temp[index] = bad_data_float;
+         pbl_data_hgt [index] = bad_data_float;
+         pbl_data_ugrd[index] = bad_data_float;
+         pbl_data_vgrd[index] = bad_data_float;
       }
 
-      if ((spfh_cnt>0) && (pbl_level>0)) {
-         mzbl = pbl_level;
-         mlog << Debug(7) << method_name << "mzbl: " << mzbl
-              << "  missing count: Q: " << (pbl_level - spfh_cnt)
-              << ", Z: " << (pbl_level - hgt_cnt) << "\n\n";
+      if (hgt_cnt < max_pbl_level) {
+         mlog << Debug(5) << method_name << "interpolate Z (HGT)\n";
+         hgt_cnt += interpolate_by_pressure(max_pbl_level, pbl_data_pres, pbl_data_hgt, true);
+      }
+      if (spfh_cnt < max_pbl_level) {
+         mlog << Debug(5) << method_name << "interpolate Q (SPFH)\n";
+         spfh_cnt += interpolate_by_pressure(max_pbl_level, pbl_data_pres, pbl_data_spfh, true);
+      }
+
+      if ((spfh_cnt>0) && (max_pbl_level>0)) {
+         ostringstream buf;
+         mzbl = max_pbl_level;
+         if(mlog.verbosity_level() >= DEBUG_LOG_LEVEL) {
+            buf << method_name << "mzbl: " << mzbl
+                << "  missing count: Q: " << (max_pbl_level - spfh_cnt)
+                << ", Z: " << (max_pbl_level - hgt_cnt) << "\n";
+            buf << method_name << "Input to calpbl_: P,T,Q,Z,U,V,MZBL=" << mzbl;
+            if (pbl_level > MAX_PBL_LEVEL) buf << " out of " << pbl_level;
+            buf << "\n";
+            for (index=0; index<max_pbl_level; index++) {
+               buf << "\tindex: " << index
+                   << "\t" << pbl_data_pres[index]
+                   << "\t" << pbl_data_temp[index]
+                   << "\t" << pbl_data_spfh[index]
+                   << "\t" << pbl_data_hgt [index]
+                   << "\t" << pbl_data_ugrd[index]
+                   << "\t" << pbl_data_vgrd[index]
+                   << "\n";
+            }
+            mlog << Debug(DEBUG_LOG_LEVEL) << buf.str() << "\n";
+         }
 
          //SUBROUTINE CALPBL(T,Q,P,Z,U,V,MZBL,HPBL,jpbl)
          calpbl_(pbl_data_temp, pbl_data_spfh, pbl_data_pres, pbl_data_hgt,
                  pbl_data_ugrd, pbl_data_vgrd, &mzbl, &hpbl, &jpbl);
       }
+      else {
+         mlog << Debug(5) << method_name << " calpbl_ is NOT called max_pbl_level: "
+              << max_pbl_level << " spfh_cnt: " << spfh_cnt << "\n";
+      }
+      pqtzuv_map_merged.clear();
    }
    return hpbl;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
-int interpolate_by_pressure(int length, float *pres_data, float *var_data) {
+int interpolate_by_pressure(int length, float *pres_data, float *var_data,
+                            bool replace_missing) {
    int idx, idx2, idx_start, idx_end;
+   int tmp_idx_start, tmp_idx_end;
    int count_interpolated;
-   bool skip_missing;
+   float prev_value;
    static const char *method_name = "interpolate_by_pressure() ";
 
    idx_start = -1;
-   idx_end = length;
-   skip_missing = false;
+   idx_end = length - 1;
+   prev_value = bad_data_float;
    count_interpolated = 0;
-   for (idx=0; idx<length; idx++) {
+   //Find the first valid value aftere skipping first missing values
+   for (idx = 0; idx<length; idx++) {
+      if (!is_eq(var_data[idx], bad_data_float)) break;
+   }
+   for (; idx<length; idx++) {
       if (is_eq(var_data[idx], bad_data_float)) {
-         skip_missing = true;
+         idx_start = idx;
+         break;
       }
-      else {
-         if (skip_missing) {
-            idx_end = idx;
-            if (idx_start >= 0) {
-               mlog << Debug(7) << method_name << "between pres["
-                    << idx_start <<"] and pres[" << idx_end <<"] ("
-                    << var_data[idx_start] << " and " << var_data[idx_end] << ")\n";
-               float data_diff = var_data[idx_end] - var_data[idx_start];
-               for (idx2 = idx_start+1; idx2<idx_end; idx2++) {
-                  float pres_ratio = (pres_data[idx2] - pres_data[idx_start])
-                        / (pres_data[idx_end] - pres_data[idx_start]);
-                  var_data[idx2] = var_data[idx_start] + (data_diff * pres_ratio);
-                  mlog << Debug(7) << method_name << " interpolated value["
-                       << idx2 << "] = " << var_data[idx2] << "\n";
-                  count_interpolated++;
-               }
-               idx_start = idx;
-               skip_missing = false;
+   }
+   for (idx=length-1; idx>=0; idx--) {
+      if (!is_eq(var_data[idx], bad_data_float)) {
+         idx_end = idx;
+         break;
+      }
+   }
+   
+   if (idx_start > idx_end) {
+      mlog << Debug(5) << method_name << "no interpolation: first missing at "
+           << idx_start << " (" << pres_data[idx_start]
+           << ") but last valid data at " << idx_end
+           << " = " << var_data[idx_end] << " (p="
+           << pres_data[idx_end] << ")\n";
+   }
+   else if (0 >= idx_start) {
+      mlog << Error << method_name << "no interpolation: because no valid data: "
+           << "index 0: " << var_data[0] << " at " <<  pres_data[0]
+           << " and index " << (length-1) << ": " << var_data[length-1]
+           << " at " <<  pres_data[length-1] << "\n";
+   }
+   else {
+      mlog << Debug(7) << method_name << "between pres["
+           << idx_start <<":" << idx_end <<"] ("
+           << pres_data[idx_start] << " to " << pres_data[idx_end] << ") data: "
+           << var_data[idx_start] << " and " << var_data[idx_end] << ")\n";
+      for (idx=idx_start; idx<idx_end; idx++) {
+         if (!is_eq(var_data[idx], bad_data_float)) continue;
+         
+         tmp_idx_start = idx - 1;
+         tmp_idx_end = idx_end;
+         for (idx2 = idx+1; idx2<idx_end; idx2++) {
+            if (!is_eq(var_data[idx2], bad_data_float)) {
+               tmp_idx_end = idx2;
+               break;
             }
          }
-         else {
-            idx_start = idx;
+
+         float base_data =  var_data[tmp_idx_start];
+         float base_pres = pres_data[tmp_idx_start];
+         float data_diff =  var_data[tmp_idx_end] - base_data;
+         float pres_diff = pres_data[tmp_idx_end] - base_pres;
+         
+         float pres_start = pres_data[tmp_idx_start];
+         float pres_end   = pres_data[tmp_idx_end];
+         float log_data_start =  log(var_data[tmp_idx_start]);
+         float log_data_end   =  log(var_data[tmp_idx_end]);
+         float log10_data_start =  log10(var_data[tmp_idx_start]);
+         float log10_data_end   =  log10(var_data[tmp_idx_end]);
+
+         float var_start = var_data[tmp_idx_start];
+         float var_end   = var_data[tmp_idx_end];
+         
+         float log_pres_s   =  log(pres_data[tmp_idx_start]);
+         float log_pres_e   =  log(pres_data[tmp_idx_end]);
+         float log10_pres_s =  log10(pres_data[tmp_idx_start]);
+         float log10_pres_e =  log10(pres_data[tmp_idx_end]);
+         
+         for (idx2 = idx; idx2<tmp_idx_end; idx2++) {
+            float log_value, log_value2;
+            float pres_ratio = (pres_data[idx2] - base_pres) / pres_diff;
+            float lin_value = base_data + (data_diff * pres_ratio);
+            float pres_a = pres_data[idx2] - pres_start;
+            float pres_b = pres_end - pres_data[idx2];
+            float data_a = var_data[idx2] - var_start;
+            float data_b = var_end - var_data[idx2];
+            
+            float exponent = (pres_a * log_data_end + pres_b * log_data_start)/(pres_diff);
+            exponent = (data_a * log_pres_e + data_b * log_pres_s)/(data_diff);
+            float log_p_value = exp(exponent);
+            float log_p_value2 = pow(10, exponent);
+            //var_data[idx2] = base_data + (data_diff * pres_ratio);
+            //var_data[idx2] = log_value;
+            
+            exponent = (pres_a * log_data_end + pres_b * log_data_start)/(pres_diff);
+            log_value = exp(exponent);
+            log_value2 = pow(10, exponent);
+            mlog << Debug(7) << method_name << " new value ["
+                 << idx2 << "] = " << log_value << " " << log_value2 << "\n";
+            exponent = (pres_b * log_data_end + pres_a * log_data_start)/(pres_diff);
+            log_value = exp(exponent);
+            log_value2 = pow(10, exponent);
+            mlog << Debug(7) << method_name << " new value["
+                 << idx2 << "] = " << log_value << " " << log_value2 << "\n";
+
+            exponent = (data_a * log_pres_e + data_b * log_pres_s)/(data_diff);
+            log_value = exp(exponent);
+            log_value2 = pow(10, exponent);
+            mlog << Debug(7) << method_name << " new value["
+                 << idx2 << "] = " << log_value << " " << log_value2 << "\n";
+
+            exponent = (data_b * log_pres_e + data_a * log_pres_s)/(data_diff);
+            log_value = exp(exponent);
+            log_value2 = pow(10, exponent);
+            mlog << Debug(7) << method_name << " new value["
+                 << idx2 << "] = " << log_value << " " << log_value2 << "\n";
+            
+            var_data[idx2] = lin_value;
+            mlog << Debug(7) << method_name << " new value["
+                 << idx2 << "] = " << var_data[idx2]
+                 << " lin: " << lin_value << "  log: " << log_value << " " << log_value2
+                 << " " << log_p_value << " " << log_p_value2
+                 << " from p[" << tmp_idx_start << ":" << tmp_idx_end
+                 << "] data_diff: " << data_diff << "  pres_ratio: " << pres_ratio
+                 << " from " << (pres_data[idx2] - base_pres) << " and " << pres_diff
+                 << "\n";
+            count_interpolated++;
+         }
+         idx = tmp_idx_end;
+      }
+      mlog << Debug(5) << method_name << "interpolated count: "
+           << count_interpolated << "\n";
+   }
+
+   if (replace_missing) {
+      for (idx=1; idx<length; idx++) {
+         if (is_eq(var_data[idx],bad_data_float)) {
+            var_data[idx] = var_data[idx-1];
+         }
+      }
+      for (idx=length-1; idx>0; idx--) {
+         if (is_eq(var_data[idx],bad_data_float)) {
+            var_data[idx] = var_data[idx+1];
          }
       }
    }
-   mlog << Debug(5) << method_name << "interpolated count: "
-        << count_interpolated << "\n";
-
    return count_interpolated;
 }
 
@@ -3119,7 +3340,7 @@ void interpolate_pqtzuv(float *prev_pqtzuv, float *cur_pqtzuv, float *next_pqtzu
 
    for (int index=1; index < mxr8vt; index++) {
       if (is_eq(cur_pqtzuv[index], bad_data_float)) {
-         float prev_value, next_value, ratio_pres;
+         float prev_value, next_value;
          prev_value = prev_pqtzuv[index];
          next_value = next_pqtzuv[index];
          if (is_eq(prev_value, bad_data_float) || is_eq(next_value, bad_data_float)) {
@@ -3132,9 +3353,19 @@ void interpolate_pqtzuv(float *prev_pqtzuv, float *cur_pqtzuv, float *next_pqtzu
             }
          }
          else {
-           ratio_pres = (cur_pqtzuv[0] - prev_pqtzuv[0]) / (next_pqtzuv[0] - prev_pqtzuv[0]);
-           cur_pqtzuv[index] = prev_value + (next_value - prev_value) * ratio_pres;
+            float ratio_pres = (cur_pqtzuv[0] - prev_pqtzuv[0]) / (next_pqtzuv[0] - prev_pqtzuv[0]);
+            cur_pqtzuv[index] = prev_value + (next_value - prev_value) * ratio_pres;
          }
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+static void merge_tqz_and_uv(float *pqtzuv_tq, const float pqtzuv_uv[mxr8vt]) {
+   for (int idx=1; idx<mxr8vt; idx++) {
+      if (is_eq(pqtzuv_tq[idx], bad_data_float)) {
+         pqtzuv_tq[idx] = pqtzuv_uv[idx];
       }
    }
 }
