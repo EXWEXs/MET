@@ -1,5 +1,5 @@
-#LyX 2.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 508
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -21,6 +21,8 @@
 \font_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -50,6 +52,7 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_minted 0
 \index Index
 \shortcut idx
 \color #008000
@@ -62,7 +65,10 @@
 \tocdepth 3
 \paragraph_separation skip
 \defskip bigskip
-\quotes_language english
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -78,7 +84,7 @@
 \begin_layout Title
 
 \series bold
-Model Evaluation Tools Version 9.0 BETA 3
+Model Evaluation Tools Version 9.0
 \begin_inset Newline newline
 \end_inset
 
@@ -160,7 +166,7 @@ Minna Win-Gildenmeister, George McCabe, James Frimel, David Fillmore, and
 \begin_layout Date
 
 \series bold
-February 2020
+March 2020
 \end_layout
 
 \begin_layout Standard
@@ -415,6 +421,23 @@ filename "Series-Analysis/MET_Users_Guide_Series-Analysis.lyx"
 \begin_layout Standard
 \begin_inset CommandInset include
 LatexCommand include
+filename "Grid-Diag/MET_Users_Guide_Grid-Diag.lyx"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset include
+LatexCommand include
 filename "MODE/MET_Users_Guide_MODE.lyx"
 
 \end_inset
@@ -508,6 +531,34 @@ filename "TC-Stat/MET_Users_Guide_TC-Stat.lyx"
 \begin_inset CommandInset include
 LatexCommand include
 filename "TC-Gen/MET_Users_Guide_TC-Gen.lyx"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\begin_inset CommandInset include
+LatexCommand include
+filename "TC-RMW/MET_Users_Guide_TC-RMW.lyx"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\begin_inset CommandInset include
+LatexCommand include
+filename "RMW-Analysis/MET_Users_Guide_RMW-Analysis.lyx"
 
 \end_inset
 

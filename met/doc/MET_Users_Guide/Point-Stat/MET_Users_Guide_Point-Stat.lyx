@@ -1,5 +1,5 @@
-#LyX 2.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 508
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -21,6 +21,8 @@
 \font_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures false
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -51,6 +53,7 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_minted 0
 \index Index
 \shortcut idx
 \color #008000
@@ -63,7 +66,10 @@
 \tocdepth 3
 \paragraph_separation skip
 \defskip bigskip
-\quotes_language english
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -105,8 +111,8 @@ The Point-Stat tool provides verification statistics for forecasts at observatio
 n points (as opposed to over gridded analyses).
  The Point-Stat tool matches gridded forecasts to point observation locations
  and supports several different interpolation options.
- The tool then computes continuous, categorical, and probabilistic verification
- statistics.
+ The tool then computes continuous, categorical, spatial, and probabilistic
+ verification statistics.
  The categorical and probabilistic statistics generally are derived by applying
  a threshold to the forecast and observation values.
  Confidence intervals - representing the uncertainty in the verification
@@ -212,7 +218,7 @@ This section provides information about the various methods available in
 
 \series medium
 In the vertical, if forecasts and observations are at the same vertical
- level, then they are paired as is.
+ level, then they are paired as-is.
  If any discrepancy exists between the vertical levels, then the forecasts
  are interpolated to the level of the observation.
  The vertical interpolation is done in natural log of pressure coordinates,
@@ -231,7 +237,7 @@ SURFACE
 message_type_group_map
 \series medium
  configuration option.
- By defualt, the surface message types include ADPSFC, SFCSHP, and MSONET.
+ By default, the surface message types include ADPSFC, SFCSHP, and MSONET.
  
 \end_layout
 
@@ -440,7 +446,11 @@ regrid
 interp
 \series default
  configuration option in grid-to-grid comparisons, the Gaussian method is
- implemented as a 2-step process.
+ named 
+\series bold
+MAXGAUSS
+\series default
+ and is implemented as a 2-step process.
  First, the data is regridded or smoothed using the maximum value interpolation
  method described below, where the 
 \series bold
@@ -1083,18 +1093,18 @@ Probabilistic forecast values are assumed to have a range of either 0 to
  range is defined as: t1 <= p < t2.
  The exception is for the highest set of thresholds, when the range includes
  1: t1 <= p <= 1.
- To make configuration easier, in METv6.0, these probabilities may be specfied
+ To make configuration easier, in METv6.0, these probabilities may be specified
  in the configuration file as a list (>0.00,>0.25,>0.50,>0.75,>1.00) or using
  shorthand notation (==0.25) for bins of equal width.
 \end_layout
 
 \begin_layout Standard
-In METv6.0, when the "prob" entry is set as a dictionary to define the field
- of interest, setting "prob_as_scalar = TRUE" indicates that this data should
- be processed as regular scalars rather than probabilities.For example, this
- option can be used to compute traditional 2x2 contingency tables and neighborho
-od verification statistics for probability data.
- It can also be used to compare two probabilityfields directly.
+When the "prob" entry is set as a dictionary to define the field of interest,
+ setting "prob_as_scalar = TRUE" indicates that this data should be processed
+ as regular scalars rather than probabilities.
+ For example, this option can be used to compute traditional 2x2 contingency
+ tables and neighborhood verification statistics for probability data.
+ It can also be used to compare two probability fields directly.
 \end_layout
 
 \begin_layout Subsubsection*
@@ -1116,7 +1126,7 @@ name "subsec:Climatology"
 
 \series medium
 For each of the types of statistics mentioned above (categorical, continuous,
- and probabilistic), it is possible to calculate mesures of skill relative
+ and probabilistic), it is possible to calculate measures of skill relative
  to climatology.
  MET will accept a climatology file provided by the user, and will evaluate
  it as a reference forecast.
@@ -1126,7 +1136,7 @@ For each of the types of statistics mentioned above (categorical, continuous,
  nature of the forecast.
  Common statistics that use a climatological reference include: the mean
  squared error skill score (MSESS), the Anomaly Correlation (ANOM_CORR),
- scalar and vector anomolies (SAL1L2 and VAL1L2), continuous ranked probability
+ scalar and vector anomalies (SAL1L2 and VAL1L2), continuous ranked probability
  skill score (CRPSS), Brier Skill Score (BSS) (Wilks, 2011; Mason, 2004).
 \end_layout
 
@@ -1532,10 +1542,8 @@ name "sec:Practical-information"
 \begin_layout Standard
 
 \series medium
-This section contains a description of how to configure and run the Point-Stat
- tool.
- The Point-Stat tool is used to perform verification of a gridded model
- field using point observations.
+The Point-Stat tool is used to perform verification of a gridded model field
+ using point observations.
  The gridded model field to be verified must be in one of the supported
  file formats.
  The point observations must be formatted as the NetCDF output of the 
@@ -1853,7 +1861,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -1989,19 +1997,22 @@ regrid         = { ...
 \begin_layout LyX-Code
 
 \series bold
-climo_mean     = {}
+climo_mean     = { ...
+ }
 \end_layout
 
 \begin_layout LyX-Code
 
 \series bold
-climo_stdev    = {}
+climo_stdev    = { ...
+ }
 \end_layout
 
 \begin_layout LyX-Code
 
 \series bold
-climo_cdf      = {}
+climo_cdf      = { ...
+ }
 \end_layout
 
 \begin_layout LyX-Code
@@ -2201,21 +2212,20 @@ The
 \series bold
 obs
 \series medium
- dictionary looks very simliar to the 
+ dictionary looks very similar to the 
 \series bold
 fcst
 \series medium
  dictionary.
- However since point observation are assigned GRIB1 codes, the observation
- section must be defined following GRIB1 conventions.
- When verifying GRIB1 forecast data, one can easily copy over the forecast
- settings to the observation dictionary using 
+ When the forecast and observation variables follow the same naming convention,
+ one can easily copy over the forecast settings to the observation dictionary
+ using 
 \series bold
 obs = fcst;
 \series medium
 .
- However, when verifying non-GRIB1 forecast data, users will need to specify
- the 
+ However when verifying forecast data in NetCDF format or verifying against
+ not-standard observation variables, users will need to specify the 
 \series bold
 fcst
 \series medium
@@ -2223,7 +2233,16 @@ fcst
 \series bold
 obs
 \series medium
- sections separately.
+ dictionaries separately.
+ The number of fields specified in the 
+\series bold
+fcst
+\series medium
+ and 
+\series bold
+obs
+\series medium
+ dictionaries must match.
 \end_layout
 
 \begin_layout Standard
@@ -2248,18 +2267,18 @@ status open
 
 \begin_layout Plain Layout
 
-http://www.emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_1.htm
+http://www.emc.ncep.noaa.gov/mmb/data_processing/PrepBUFR.doc/table_1.htm
 \end_layout
 
 \end_inset
 
  for a list of the possible types.
- If verifying GRIB1 forecsat data, it may be defined in the forecast dictionary
- and the copied into the observation dictionary using 
+ If using 
 \series bold
 obs = fcst;
 \series medium
-.
+, it can be defined in the forecast dictionary and the copied into the observati
+on dictionary.
 \end_layout
 
 \begin_layout Standard
@@ -2973,7 +2992,7 @@ ECNT
 \series bold
 RPS
 \series medium
- for Ranked Probabilty Score is only computed for the HiRA methodology
+ for Ranked Probability Score is only computed for the HiRA methodology
 \end_layout
 
 \begin_layout Description
@@ -3023,7 +3042,7 @@ Note that writing out matched pair data (MPR lines) for a large number of
 \end_layout
 
 \begin_layout Standard
-If all line types corresponding to a particular verificaiton method are
+If all line types corresponding to a particular verification method are
  set to NONE, the computation of those statistics will be skipped in the
  code and thus make the Point-Stat tool run more efficiently.
  For example, if FHO, CTC, and CTS are all set to NONE, the Point-Stat tool
@@ -3042,11 +3061,7 @@ name "subsec:point_stat-output"
 \end_layout
 
 \begin_layout Standard
-
-\series bold
-point_stat
-\series default
- produces output in STAT and, optionally, ASCII format.
+point_stat produces output in STAT and, optionally, ASCII format.
  The ASCII output duplicates the STAT output but has the data organized
  by line type.
  The output files will be written to the default output directory or the
@@ -3058,69 +3073,28 @@ The output STAT file will be named using the following naming convention:
 \end_layout
 
 \begin_layout Standard
-
-\series bold
-point_stat_PREFIX_HHMMSSL_YYYYMMDD_HHMMSSV.stat 
-\series medium
-where 
-\series bold
-PREFIX
-\series medium
- indicates the user-defined output prefix, 
-\series bold
-HHMMSSL
-\series medium
- indicates the forecast lead time and 
-\series bold
-YYYYMMDD_HHMMSS
-\series medium
- indicates the forecast valid time.
+point_stat_PREFIX_HHMMSSL_YYYYMMDD_HHMMSSV.stat where PREFIX indicates the
+ user-defined output prefix, HHMMSSL indicates the forecast lead time and
+ YYYYMMDD_HHMMSS indicates the forecast valid time.
  
 \end_layout
 
 \begin_layout Standard
-
-\series medium
 The output ASCII files are named similarly: 
 \end_layout
 
 \begin_layout Standard
-
-\series bold
-point_stat_PREFIX_HHMMSSL_YYYYMMDD_HHMMSSV_TYPE.txt
-\series medium
- where 
-\series bold
-TYPE
-\series medium
- is one of 
-\series bold
-mpr, fho, ctc, cts, cnt, mctc, mcts, pct, pstd, pjc, prc, ecnt, rps, eclv,
- sl1l2, sal1l2, vl1l2
-\series default
-, 
-\series bold
-vcnt
-\series medium
- or 
-\series bold
-val1l2
-\series medium
- to indicate the line type it contains.
+point_stat_PREFIX_HHMMSSL_YYYYMMDD_HHMMSSV_TYPE.txt where TYPE is one of
+ mpr, fho, ctc, cts, cnt, mctc, mcts, pct, pstd, pjc, prc, ecnt, rps, eclv,
+ sl1l2, sal1l2, vl1l2, vcnt or val1l2 to indicate the line type it contains.
 \end_layout
 
 \begin_layout Standard
-
-\series medium
 The first set of header columns are common to all of the output files generated
  by the Point-Stat tool.
  Tables describing the contents of the header columns and the contents of
  the additional columns for each line type are listed in the following tables.
- The 
-\series bold
-ECNT 
-\series default
-line type is described in Section 
+ The ECNT line type is described in Section 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "table_ES_header_info_es_out_ECNT"
@@ -3128,13 +3102,7 @@ reference "table_ES_header_info_es_out_ECNT"
 \end_inset
 
 .
- 
-\series medium
-The 
-\series bold
-RPS 
-\series default
-line type is described in Section 
+ The RPS line type is described in Section 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "table_ES_header_info_es_out_RPS"
@@ -3383,7 +3351,7 @@ FCST_VALID_BEG
 \begin_inset Text
 
 \begin_layout Plain Layout
-Forecast valid start time in YYYYMMDDHH format
+Forecast valid start time in YYYYMMDD_HHMMSS format
 \end_layout
 
 \end_inset
@@ -3412,7 +3380,7 @@ FCST_VALID_END
 \begin_inset Text
 
 \begin_layout Plain Layout
-Forecast valid end time in YYYYMMDDHH format
+Forecast valid end time in YYYYMMDD_HHMMSS format
 \end_layout
 
 \end_inset
@@ -3470,7 +3438,7 @@ OBS_VALID_BEG
 \begin_inset Text
 
 \begin_layout Plain Layout
-Observation valid start time in YYYYMMDDHH format
+Observation valid start time in YYYYMMDD_HHMMSS format
 \end_layout
 
 \end_inset
@@ -3499,7 +3467,7 @@ OBS_VALID_END
 \begin_inset Text
 
 \begin_layout Plain Layout
-Observation valid end time in YYYYMMDDHH format
+Observation valid end time in YYYYMMDD_HHMMSS format
 \end_layout
 
 \end_inset
@@ -5470,8 +5438,8 @@ EDS _BCU
 \begin_inset Text
 
 \begin_layout Plain Layout
-Extreme Depenency Score including normal and bootstrap upper and lower confidenc
-e limits
+Extreme Dependency Score including normal and bootstrap upper and lower
+ confidence limits
 \end_layout
 
 \end_inset
@@ -5516,8 +5484,8 @@ SEDS _BCU
 \begin_inset Text
 
 \begin_layout Plain Layout
-Symmetric Extreme Depenency Score including normal and bootstrap upper and
- lower confidence limits
+Symmetric Extreme Dependency Score including normal and bootstrap upper
+ and lower confidence limits
 \end_layout
 
 \end_inset
@@ -5562,8 +5530,8 @@ EDI _BCU
 \begin_inset Text
 
 \begin_layout Plain Layout
-Extreme Depenency Index including normal and bootstrap upper and lower confidenc
-e limits
+Extreme Dependency Index including normal and bootstrap upper and lower
+ confidence limits
 \end_layout
 
 \end_inset
@@ -6792,7 +6760,7 @@ ANOM_CORR_BCU
 \begin_inset Text
 
 \begin_layout Plain Layout
-The Anomoly Correlation including normal and bootstrap upper and lower confidenc
+The Anomaly Correlation including normal and bootstrap upper and lower confidenc
 e limits
 \end_layout
 
@@ -11072,8 +11040,8 @@ name "table_PS_format_info_VCNT"
 \begin_inset Tabular
 <lyxtabular version="3" rows="22" columns="3">
 <features islongtable="true" longtabularalignment="center">
-<column alignment="left" valignment="top" width="2.5cm">
-<column alignment="left" valignment="top" width="4.5cm">
+<column alignment="left" valignment="top" width="2cm">
+<column alignment="left" valignment="top" width="3cm">
 <column alignment="left" valignment="top" width="9cm">
 <row>
 <cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
@@ -11189,7 +11157,7 @@ TOTAL
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11218,7 +11186,7 @@ FBAR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11247,7 +11215,7 @@ OBAR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11276,7 +11244,7 @@ FS_RMS
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11305,7 +11273,7 @@ OS_RMS
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11334,7 +11302,7 @@ MSVE
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11364,7 +11332,7 @@ RMSVE
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11393,7 +11361,7 @@ FSTDEV
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11422,7 +11390,7 @@ OSTDEV
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11451,7 +11419,7 @@ FDIR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11480,7 +11448,7 @@ ODIR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11509,7 +11477,7 @@ FBAR_SPEED
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11538,7 +11506,7 @@ OBAR_SPEED
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11567,7 +11535,7 @@ VDIFF_SPEED
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11597,7 +11565,7 @@ VDIFF_DIR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11627,7 +11595,7 @@ SPEED_ERR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11657,7 +11625,7 @@ SPEED_ABSERR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11686,7 +11654,7 @@ DIR_ERR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11700,7 +11668,7 @@ Signed angle between the directions of the average forecast and observed
 </cell>
 </row>
 <row>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11709,7 +11677,7 @@ Signed angle between the directions of the average forecast and observed
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -11718,7 +11686,7 @@ DIR_ABSERR
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout

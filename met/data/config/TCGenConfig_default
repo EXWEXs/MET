@@ -1,6 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Default TCGen configuration file
+// TC-Gen configuration file.
+//
+// For additional information, see the MET_BASE/config/README_TC file.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -40,7 +42,6 @@ min_duration = 12;
 // track point where all of these criteria are met.
 //
 fcst_genesis = {
-   category    = [];
    vmax_thresh = NA;
    mslp_thresh = NA;
 }
@@ -98,46 +99,34 @@ desc = "NA";
 model = [];
 
 //
-// Storm identifiers
+// BEST and operational track storm identifiers
 //
 storm_id = [];
 
 //
-// Basins
-//
-basin = [];
-
-//
-// Cyclone numbers
-//
-cyclone = [];
-
-//
-// Storm names
+// BEST and operational track storm names
 //
 storm_name = [];
 
 //
-// Forecast initialization time windows to include or exclude
+// Forecast and operational initialization time window
 //
 init_beg = "";
 init_end = "";
-init_inc = [];
-init_exc = [];
 
 //
-// Valid time window
+// Forecast, BEST, and operational valid time window
 //
 valid_beg = "";
 valid_end = "";
 
 //
-// Forecast initialization hours
+// Forecast and operational initialization hours
 //
 init_hour = [];
 
 //
-// Forecast lead times in hours
+// Forecast and operational lead times in hours
 //
 lead = [];
 

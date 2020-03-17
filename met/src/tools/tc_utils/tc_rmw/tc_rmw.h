@@ -71,7 +71,7 @@ static const char* default_out_dir = ".";
 static const char* default_out_prefix = "";
 
 // Nautical mile to kilometer conversion
-static const float nm_to_km = 1.852;
+static const double nm_to_km = 1.852;
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -98,7 +98,7 @@ static ConcatString out_prefix;
 ////////////////////////////////////////////////////////////////////////
 
 // Output NetCDF file
-static ConcatString out_nc_file;
+static ConcatString out_file;
 static NcFile*      nc_out = (NcFile*) 0;
 static NcDim        range_dim;
 static NcDim        azimuth_dim;
@@ -124,7 +124,7 @@ static map<string, string> variable_long_names;
 static map<string, string> variable_units;
 
 static set<string> pressure_level_strings;
-static set<float> pressure_levels;
+static set<double> pressure_levels;
 static map<string, int> pressure_level_indices;
 
 ////////////////////////////////////////////////////////////////////////
@@ -138,10 +138,6 @@ static Grid         latlon_arr;
 static TcrmwData    grid_data;
 static TcrmwGrid    tcrmw_grid;
 static Grid         grid;
-
-// Data file factory and input files
-static Met2dDataFileFactory mtddf_factory;
-static Met2dDataFile* data_mtddf = (Met2dDataFile*) 0;
 
 // Grid coordinate arrays
 static double* lat_arr;

@@ -1,5 +1,5 @@
-#LyX 2.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 508
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -21,6 +21,8 @@
 \font_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -51,6 +53,7 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_minted 0
 \index Index
 \shortcut idx
 \color #008000
@@ -63,7 +66,10 @@
 \tocdepth 3
 \paragraph_separation skip
 \defskip bigskip
-\quotes_language english
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -224,12 +230,15 @@ reference "chap:MET-TC-Overview"
  - 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "chap:TC-Stat"
+reference "chap:RMW-Analysis-tool"
+plural "false"
+caps "false"
+noprefix "false"
 
 \end_inset
 
  describe tools focused on tropical cyclones, including MET-TC Overview,
- TC-Dland, TC-Pairs and TC-Stat.
+ TC-Dland, TC-Pairs, TC-Stat, TC-Gen, TC-RMW and RMW-Analysis.
  Finally, Chapter 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -458,7 +467,7 @@ reference "Fig_Overview_MET_Overview_Flowchart"
  The main stages represented are input, reformatting, plotting, intermediate
  output, statistical analyses, and output and aggregation/analysis.
  The MET-TC package functions independently of the other MET modules, as
- inducated in the Figure.
+ indicated in the Figure.
  Each of these stages is described further in later chapters.
  For example, the input and output formats are discussed in 
 \begin_inset CommandInset ref
@@ -477,8 +486,11 @@ reference "chap:MET-Data-I/O"
 \series medium
 The reformatting stage of MET consists of the Gen-Vx-Mask, PB2NC, ASCII2NC,
  Pcp-Combine, MADIS2NC, MODIS regrid, WWMCA Regrid, and Ensemble-Stat tools.
- The PB2NC tool is used to create NetCDF files from input PrepBufr files
- containing point observations.
+ The PB2NC tool is used to create NetCDF files from input 
+\series default
+PrepBUFR
+\series medium
+ files containing point observations.
  Likewise, the ASCII2NC tool is used to create NetCDF files from input ASCII
  point observations.
  Many types of data from the MADIS network can be formatted for use in MET
@@ -492,7 +504,7 @@ The reformatting stage of MET consists of the Gen-Vx-Mask, PB2NC, ASCII2NC,
  The output mask can then be used to efficiently limit verification to the
  interior of a user specified region.
  The Pcp-Combine tool can be used to add, subtract, or derive fields across
- multiple timesteps.
+ multiple time steps.
  Often it is run to accumulate precipitation amounts into the time interval
  selected by the user - if a user would like to verify over a different
  time interval than is included in their forecast or observational dataset.
@@ -513,7 +525,7 @@ status open
 \noindent
 \align center
 \begin_inset Graphics
-	filename /d1/johnhg/MET/MET_development/git/MET-develop/met/doc/MET_Users_Guide/Flowchart/MET_flowchart_v9.0.png
+	filename ../Flowchart/MET_flowchart_v9.0.png
 	scale 60
 
 \end_inset
@@ -529,7 +541,7 @@ status open
 \begin_layout Plain Layout
 Basic representation of current MET structure and modules.
  Gray areas represent input and output files.
- Dark green areas represent reformating and pre-processing tools.
+ Dark green areas represent reformatting and pre-processing tools.
  Light green areas represent plotting utilities.
  Blue areas represent statistical tools.
  Yellow areas represent aggregation and analysis tools.
@@ -647,7 +659,7 @@ The MODE (Method for Object-based Diagnostic Evaluation) tool also uses
 \series medium
 The MODE-TD tool extends object-based analysis from two-dimensional forecasts
  and observations to include the time dimension.
- In addition to the two dimensional information provded by MODE, MODE-TD
+ In addition to the two dimensional information provided by MODE, MODE-TD
  can be used to examine even more features including displacement in time,
  and duration and speed of moving areas of interest.
 \end_layout
@@ -715,16 +727,22 @@ The Stat-Analysis and MODE-Analysis tools aggregate the output statistics
 \begin_layout Standard
 Tropical cyclone forecasts and observations are quite different than numerical
  model forecasts, and thus they have their own set of tools.
- The MET-TC package includes three modules: TC-DLAND, TC-PAIRS, and TC-STAT.
- The TC-DLAND module calculates the distance to land from all locations
+ The MET-TC package includes several modules: TC-Dland, TC-Pairs, TC-Stat,
+ TC-Gen, TC-RMW, and RMW-Analysis.
+ The TC-Dland module calculates the distance to land from all locations
  on a specified grid.
  This information can be used in later modules to eliminate tropical cyclones
  that are over land from being included in the statistics.
- TC-PAIRS matches up tropical cyclone forecasts and observations and writes
+ TC-Pairs matches up tropical cyclone forecasts and observations and writes
  all output to a file.
- In TC-STAT, these forecast / observation pairs are analyzed according to
+ In TC-Stat, these forecast / observation pairs are analyzed according to
  user preference to produce statistics.
- 
+ TC-Gen evaluates the performance of Tropical Cyclone genesis forecast using
+ contingency table counts and statistics.
+ TC-RMW performs a coordinate transformation for gridded model or analysis
+ fields centered on the current storm location.
+ RMW-Analysis filters and aggregates the output of TC-RMW across multiple
+ cases.
 \end_layout
 
 \begin_layout Standard
@@ -775,109 +793,20 @@ https://dtcenter.org/community-code/model-evaluation-tools-met/user-support
 ).
  Plans are also in place to incorporate many new capabilities and options
  in future releases of MET.
- Some of the planned additions are listed below.
+ Please refer to the issues listed in the MET GitHub repository (
+\begin_inset Flex URL
+status open
+
+\begin_layout Plain Layout
+
+https://github.com/NCAR/MET/issues
 \end_layout
 
-\begin_layout Standard
-Additional statistical capabilities
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Additional spatial forecast verification methods 
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Additional hurricane verification fields and methods
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Enhanced support for time series verification
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Additional methods for verification of climate and seasonal forecasts
-\end_layout
-
-\begin_layout Standard
-Additional analysis capabilities and plotting routines
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Post to the MET website sample analysis and plotting routines that may include
-\series default
-
-\begin_inset Separator latexpar
 \end_inset
 
-
+) to see our development priorities for upcoming releases.
 \end_layout
 
-\begin_deeper
-\begin_layout Itemize
-
-\series medium
-Boxplots
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Discrimination plots
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Reliability diagrams
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Scatter/density plots
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Color-fill/contour maps of statistics
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Height series
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Histograms
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Taylor diagrams
-\end_layout
-
-\begin_layout Itemize
-
-\series medium
-Performance diagrams
-\end_layout
-
-\end_deeper
 \begin_layout Section
 Code support
 \begin_inset CommandInset label
@@ -963,13 +892,11 @@ Fortify
 \end_layout
 
 \begin_layout Standard
-Since the previous release of MET, requirements from various government
- agencies that use MET have resulted in our code being analyzed by Fortify,
- a proprietary static source code analyzer owned by HP Enterprise Security
- Products.
- Briefly, Fortify looks at source code and analyzes it for security risks,
- memory leaks, uninitialized variables, and other such weaknesses and bad
- coding practices.
+Requirements from various government agencies that use MET have resulted
+ in our code being analyzed by Fortify, a proprietary static source code
+ analyzer owned by HP Enterprise Security Products.
+ Fortify analyzes source code to identify for security risks, memory leaks,
+ uninitialized variables, and other such weaknesses and bad coding practices.
  Fortify categorizes any issues it finds as low priority, high priority,
  or critical, and reports these issues back to the developers for them to
  address.
@@ -982,18 +909,14 @@ Since the previous release of MET, requirements from various government
 \end_layout
 
 \begin_layout Standard
-The MET developers are pleased to report that after several months of work
- we have achieved this goal.
- Fortify now reports 
-\shape italic
-zero
-\shape default
- high priority or critical issues in the MET code.
- Users of MET tools who work in high security environments can therefore
- rest assured about the possibility of security risks when using MET, since
- the quality of the code has now been vetted by unbiased third-party experts.
- The MET developers plan to continue using Fortify regularly to ensure that
- these counts remain at zero in all future releases.
+The MET developers are pleased to report that Fortify reports zero critical
+ issues in the MET code.
+ Users of the MET tools who work in high security environments can rest
+ assured about the possibility of security risks when using MET, since the
+ quality of the code has now been vetted by unbiased third-party experts.
+ The MET developers continue using Fortify routinely to ensure that the
+ critical counts remain at zero and to further reduce the counts for lower
+ priority issues.
 \end_layout
 
 \end_body

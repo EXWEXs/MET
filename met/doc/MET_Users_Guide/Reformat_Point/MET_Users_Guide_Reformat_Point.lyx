@@ -1,5 +1,5 @@
-#LyX 2.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 508
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -21,6 +21,8 @@
 \font_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -51,6 +53,7 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_minted 0
 \index Index
 \shortcut idx
 \color #008000
@@ -63,7 +66,10 @@
 \tocdepth 3
 \paragraph_separation skip
 \defskip bigskip
-\quotes_language english
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -92,9 +98,13 @@ name "chap:Re-Formatting-of-Point"
 \series medium
 There are several formats of point observations that may preprocessed using
  the suite of reformatting tools in MET.
- These include PrepBufr data from NCEP, SURFRAD data from NOAA, AERONET
- data from NASA, MADIS data from NOAA, little_r from WRF simulations, and
- user defined data in a generic ASCII format.
+ These include 
+\series default
+PrepBUFR
+\series medium
+ data from NCEP, SURFRAD data from NOAA, AERONET data from NASA, MADIS data
+ from NOAA, little_r from WRF simulations, and user-defined data in a generic
+ ASCII format.
  These steps are represented by the first columns in the MET flowchart depicted
  in Figure 
 \begin_inset CommandInset ref
@@ -104,8 +114,7 @@ reference "Fig_Overview_MET_Overview_Flowchart"
 \end_inset
 
 .
- Output data formats and the software modules used to reformat point data
- are described in later sections.
+ The software tools used to reformat point data are described in this chapter.
 \end_layout
 
 \begin_layout Section
@@ -123,11 +132,18 @@ name "sec:PB2NC-tool"
 
 \series medium
 This section describes how to configure and run the PB2NC tool.
- The PB2NC tool is used to stratify the contents of an input PrepBufr point
- observation file and reformat it into NetCDF format for use by the Point-Stat
- tool.
- The PB2NC tool must be run on the input PrepBufr point observation file
- prior to performing verification with the MET statistics tools.
+ The PB2NC tool is used to stratify the contents of an input 
+\series default
+PrepBUFR
+\series medium
+ point observation file and reformat it into NetCDF format for use by other
+ MET tools.
+ The PB2NC tool must be run on the input 
+\series default
+PrepBUFR
+\series medium
+ point observation file prior to performing verification with the MET statistics
+ tools.
 \end_layout
 
 \begin_layout Subsection
@@ -216,7 +232,7 @@ hskip 0.5in}
 
 \end_inset
 
-[-pbfile prepbufr_file]
+[-pbfile PrepBUFR_file]
 \end_layout
 
 \begin_layout LyX-Code
@@ -367,7 +383,11 @@ Required arguments for pb2nc
 \series bold
 prepbufr_file
 \series medium
- argument indicates the name of the PrepBufr file to be processed.
+ argument is the 
+\series default
+input PrepBUFR
+\series medium
+ file to be processed.
 \end_layout
 
 \begin_layout Description
@@ -378,7 +398,7 @@ prepbufr_file
 \series bold
 netcdf_file
 \series medium
- argument indicates the name given to the output NetCDF file.
+ argument is the output NetCDF file to be written.
 \end_layout
 
 \begin_layout Description
@@ -389,7 +409,7 @@ netcdf_file
 \series bold
 config_file
 \series medium
- argument indicates the name of the configuration file to be used.
+ argument is the configuration file to be used.
  The contents of the configuration file are discussed below.
 \end_layout
 
@@ -408,7 +428,11 @@ Optional arguments for pb2nc
 \series bold
 -pbfile prepbufr_file
 \series medium
- option may be used to pass additional PrepBufr files to the PB2NC tool.
+ option is used to pass additional 
+\series default
+input PrepBUFR
+\series medium
+ files.
 \end_layout
 
 \begin_layout Description
@@ -456,7 +480,11 @@ num_messages
 \begin_inset Quotes erd
 \end_inset
 
- PrepBufr messages should be processed rather than the whole file.
+ 
+\series default
+PrepBUFR
+\series medium
+ messages should be processed rather than the whole file.
  This option is provided to speed up testing because running the PB2NC tool
  can take a few minutes for each file.
  Most users will not need this option.
@@ -470,8 +498,11 @@ num_messages
 \series bold
 -dump path
 \series medium
- option may be used to dump the entire contents of the PrepBufr file to
- several ASCII files written to the directory specified by 
+ option may be used to dump the entire contents of the 
+\series default
+PrepBUFR
+\series medium
+ file to several ASCII files written to the directory specified by 
 \begin_inset Quotes eld
 \end_inset
 
@@ -485,7 +516,11 @@ path
 
 .
  The user may use this option to view a human-readable version of the input
- PrepBufr file, although writing the contents to ASCII files can be slow.
+ 
+\series default
+PrepBUFR
+\series medium
+ file, although writing the contents to ASCII files can be slow.
 \end_layout
 
 \begin_layout Description
@@ -498,7 +533,7 @@ path
 \series medium
  option shows the available variables with valid data from the BUFR input.
  It collects the available variable list from BUFR input and checks the
- existance of valid data and directs the variable names with valid data
+ existence of valid data and directs the variable names with valid data
  to the screen.
  The NetCDF output won't be generated.
  
@@ -520,7 +555,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -558,7 +593,7 @@ level
 \series default
  option indicates the desired level of compression (deflate level) for NetCDF
  variables.
- Tha valid level is between 0 and 9.
+ The valid level is between 0 and 9.
  The value of 
 \begin_inset Quotes eld
 \end_inset
@@ -785,8 +820,12 @@ message_type = [];
 \begin_layout Standard
 
 \series medium
-Each PrepBufr message is tagged with one of eighteen message types as listed
- in the share/met/config/README file.
+Each 
+\series default
+PrepBUFR
+\series medium
+ message is tagged with one of eighteen message types as listed in the share/met
+/config/README file.
  The 'message_type' refers to the type of observation from which the observation
  value (or 'report') was derived.
  The user may specify a comma-separated list of message types to be retained.
@@ -844,9 +883,16 @@ key
 val
 \series medium
  string.
- This defines a mapping of input PrepBufr message types to output message
- types.
- This provides a method for renaming input PrepBufr message types.
+ This defines a mapping of input 
+\series default
+PrepBUFR
+\series medium
+ message types to output message types.
+ This provides a method for renaming input 
+\series default
+PrepBUFR
+\series medium
+ message types.
 \end_layout
 
 \begin_layout Standard
@@ -948,8 +994,11 @@ station_id = [];
 \begin_layout Standard
 
 \series medium
-Each PrepBufr message has a station identification string associated with
- it.
+Each 
+\series default
+PrepBUFR
+\series medium
+ message has a station identification string associated with it.
  The user may specify a comma-separated list of station IDs to be retained.
  Providing an empty list indicates that messages from all station IDs will
  be retained.
@@ -1034,10 +1083,17 @@ pb_report_type, in_report_type
 \series bold
 instrument_type
 \series medium
- variables are used to specify comma-separated lists of PrepBufr report
- types, input report types, and instrument types to be retained, respectively.
- If left empty, all PrepBufr report types, input report types, and instrument
- types will be retained.
+ variables are used to specify comma-separated lists of 
+\series default
+PrepBUFR
+\series medium
+ report types, input report types, and instrument types to be retained,
+ respectively.
+ If left empty, all 
+\series default
+PrepBUFR
+\series medium
+ report types, input report types, and instrument types will be retained.
  See the following for more details:
 \end_layout
 
@@ -1047,7 +1103,7 @@ status open
 
 \begin_layout Plain Layout
 
-http://www.emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_4.htm
+http://www.emc.ncep.noaa.gov/mmb/data_processing/PrepBUFR.doc/table_4.htm
 \end_layout
 
 \end_inset
@@ -1061,7 +1117,7 @@ status open
 
 \begin_layout Plain Layout
 
-http://www.emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_6.htm
+http://www.emc.ncep.noaa.gov/mmb/data_processing/PrepBUFR.doc/table_6.htm
 \end_layout
 
 \end_inset
@@ -1116,8 +1172,11 @@ The
 \series bold
 level_category
 \series medium
- variable is used to specify a comma-separated list of Prepbufr data level
- categories to retain.
+ variable is used to specify a comma-separated list of 
+\series default
+PrepBUFR
+\series medium
+ data level categories to retain.
  An empty string indicates that all level categories should be retained.
  Accepted values and their meanings are described in Table 
 \begin_inset CommandInset ref
@@ -1138,7 +1197,7 @@ status open
 
 \begin_layout Plain Layout
 
-http://www.emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_1.htm 
+http://www.emc.ncep.noaa.gov/mmb/data_processing/PrepBUFR.doc/table_1.htm 
 \end_layout
 
 \end_inset
@@ -1401,7 +1460,11 @@ obs_bufr_var = [ 'QOB', 'TOB', 'ZOB', 'UOB', 'VOB' ];
 \begin_layout Standard
 
 \series medium
-Each PrepBufr message will likely contain multiple observation variables.
+Each 
+\series default
+PrepBUFR
+\series medium
+ message will likely contain multiple observation variables.
  The 
 \series bold
 obs_bufr_var
@@ -1411,10 +1474,11 @@ obs_bufr_var
  The variable name comes from BUFR file which includes BUFR table.
  The following BUFR names may be retained: QOB, TOB, ZOB, UOB, and VOB for
  specific humidity, temperature, height, and the u and v components of winds.
- The following BUFR names may be derived: D_DPT, D_WIND, D_RH, D_MIXR, and
- D_PRMSL for dewpoint, wind speed, relative humidity, mixing ratio, and
- pressure reduced to MSL.
- This connfiguration replaces 
+ The following BUFR names may be derived: D_DPT, D_WIND, D_RH, D_MIXR, D_PRMSL,
+ D_PBL, and D_CAPE for dew point, wind speed, relative humidity, mixing
+ ratio, pressure reduced to MSL, planetary boundary layer height, and convective
+ available potential energy.
+ This configuration replaces 
 \series bold
 obs_grib_code
 \series medium
@@ -1516,6 +1580,18 @@ obs_bufr_map = [
 \begin_layout LyX-Code
 
 \series bold
+{ key = 'D_PBL';    val = 'PBL';   },
+\end_layout
+
+\begin_layout LyX-Code
+
+\series bold
+{ key = 'D_CAPE';   val = 'CAPE';  }
+\end_layout
+
+\begin_layout LyX-Code
+
+\series bold
 ];
 \end_layout
 
@@ -1583,10 +1659,18 @@ event_stack_flag = TOP;
 \begin_layout Standard
 
 \series medium
-A PrepBufr message may contain duplicate observations with different quality
- mark values.
- The 
+A 
+\series default
+PrepBUFR
+\series medium
+ message may contain duplicate observations with different quality mark
+ values.
+ The
 \series bold
+
+\begin_inset Newline newline
+\end_inset
+
 event_stack_flag
 \series medium
  indicates whether to use the observations at the top of the event stack
@@ -1632,6 +1716,12 @@ time_summary = {
 \begin_layout LyX-Code
 
 \series bold
+   raw_data   = FALSE;
+\end_layout
+
+\begin_layout LyX-Code
+
+\series bold
    beg        = "000000";
 \end_layout
 
@@ -1662,13 +1752,13 @@ time_summary = {
 \begin_layout LyX-Code
 
 \series bold
-   grib_code  = [ 11, 204, 211 ];
+   grib_code  = [];
 \end_layout
 
 \begin_layout LyX-Code
 
 \series bold
-   obs_var    = [];
+   obs_var    = [ "TMP", "WDIR", "RH" ];
 \end_layout
 
 \begin_layout LyX-Code
@@ -1722,6 +1812,13 @@ TRUE
 FALSE
 \series medium
 ).
+ If the 
+\series bold
+raw_data
+\series medium
+ flag is set to TRUE, then both the individual observation values and the
+ derived time summary value will be written to the output.
+ If FALSE, only the summary values are written.
  Observations may be summarized across the user specified time period defined
  by the 
 \series bold
@@ -1811,7 +1908,7 @@ obs_var
 \series bold
 grib_code
 \series medium
- entry is an array of itegers while the 
+ entry is an array of integers while the 
 \series bold
 obs_var
 \series medium
@@ -1865,7 +1962,7 @@ vld_thresh
 \series bold
 vld_freq
 \series default
- entry specifies the expected frequency of obesrvations in seconds.
+ entry specifies the expected frequency of observations in seconds.
  The width of the time window is divided by this frequency to compute the
  expected number of observations for the time window.
  The actual number of valid observations is divided by the expected number
@@ -2030,7 +2127,7 @@ nobs
 \begin_inset Text
 
 \begin_layout Plain Layout
-Number of PrepBufr observations in the file (UNLIMITED)
+Number of PrepBUFR observations in the file (UNLIMITED)
 \end_layout
 
 \end_inset
@@ -2050,7 +2147,7 @@ nhdr, npbhdr
 \begin_inset Text
 
 \begin_layout Plain Layout
-Number of PrepBufr messages in the file (variable) 
+Number of PrepBUFR messages in the file (variable) 
 \end_layout
 
 \end_inset
@@ -2161,9 +2258,9 @@ name "table_reform-point_pb2nc_output_vars"
 \begin_inset Tabular
 <lyxtabular version="3" rows="23" columns="3">
 <features tabularvalignment="middle">
-<column alignment="left" valignment="top" width="1.1in">
-<column alignment="left" valignment="top" width="1.1in">
-<column alignment="left" valignment="top" width="4.4in">
+<column alignment="left" valignment="top" width="2.5cm">
+<column alignment="left" valignment="top" width="2.5cm">
+<column alignment="left" valignment="top" width="9cm">
 <row>
 <cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
@@ -2249,7 +2346,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2279,7 +2376,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2309,7 +2406,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2339,7 +2436,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2368,7 +2465,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2397,7 +2494,7 @@ nobs
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2571,11 +2668,11 @@ npbhdr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
-Integer PREPBUFR report type value.
+Integer PrepBUFR report type value.
 \end_layout
 
 \end_inset
@@ -2600,7 +2697,7 @@ npbhdr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2629,7 +2726,7 @@ npbhdr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2658,7 +2755,7 @@ nhdr_typ, mxstr2
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2687,7 +2784,7 @@ nhdr_sid, mxstr2
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2716,7 +2813,7 @@ nhdr_vld, mxstr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2746,7 +2843,7 @@ nobs_qty, mxstr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2775,7 +2872,7 @@ obs_var_num, mxstr
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2804,7 +2901,7 @@ obs_var_num, mxstr2
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2834,7 +2931,7 @@ obs_var_num, mxstr3
 
 \end_inset
 </cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
@@ -2849,10 +2946,6 @@ Lookup table containing a description string for the unique observation
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Plain Layout
 
 \end_layout
 
@@ -2879,8 +2972,12 @@ This section describes how to run the ASCII2NC tool.
  The ASCII2NC tool is used to reformat ASCII point observations into the
  NetCDF format expected by the Point-Stat tool.
  For those users wishing to verify against point observations that are not
- available in PrepBufr format, the ASCII2NC tool provides a way of incorporating
- those observations into MET.
+ available in 
+\series default
+PrepBUFR
+\series medium
+ format, the ASCII2NC tool provides a way of incorporating those observations
+ into MET.
  If the ASCII2NC tool is used to perform a reformatting step, no configuration
  file is needed.
  However, for more complex processing, such as summarizing time series observati
@@ -2909,7 +3006,7 @@ http://www.esrl.noaa.gov/gmd/grad/surfrad/
 \end_inset
 
 ), the Western Wind and Solar Integration Study (WWSIS) format, and the
- AErosol RObotic NEtwork (AERONET) format (found at 
+ AErosol RObotic NEtwork (AERONET) versions 2 and 3 format (found at 
 \begin_inset Flex URL
 status open
 
@@ -2923,6 +3020,20 @@ http://aeronet.gsfc.nasa.gov/
 ).
  WWSIS data are available by request from National Renewable Energy Laboratory
  (NREL) in Boulder, CO.
+\end_layout
+
+\begin_layout Standard
+MET version 9.0 adds support for the passing observations to ascii2nc using
+ a Python script with the 
+\begin_inset Quotes eld
+\end_inset
+
+-format python
+\begin_inset Quotes erd
+\end_inset
+
+ option.
+ An example of running ASCII2NC with Python embedding is included below.
 \end_layout
 
 \begin_layout Standard
@@ -3234,7 +3345,7 @@ Elevation in msl of the observing location.
 \begin_inset Text
 
 \begin_layout Plain Layout
-Grib_Code or Variable_Name
+GRIB_Code or Variable_Name
 \end_layout
 
 \end_inset
@@ -3588,8 +3699,17 @@ Required arguments for ascii2nc
 \series bold
 ascii_file
 \series medium
- argument indicates the name of the ASCII point observation file(s) to be
- processed.
+ argument is the ASCII point observation file(s) to be processed.
+ If using Python embedding with 
+\begin_inset Quotes eld
+\end_inset
+
+-format python
+\begin_inset Quotes erd
+\end_inset
+
+ provide a quoted string containing the Python script to be run followed
+ by any command line arguments that script takes.
 \end_layout
 
 \begin_layout Description
@@ -3600,7 +3720,7 @@ ascii_file
 \series bold
 netcdf_file
 \series medium
- argument indicates the name given to the output NetCDF file.
+ argument is the NetCDF output file to be written.
 \end_layout
 
 \begin_layout Standard
@@ -3618,8 +3738,71 @@ Optional arguments for ascii2nc
 \series bold
 -format ASCII_format
 \series medium
- option may be set to "met_point", "little_r", "surfrad", "wwsis", "aeronet",
- "aeronetv2", or "aeronetv3".
+ option may be set to 
+\begin_inset Quotes eld
+\end_inset
+
+met_point
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+little_r
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+surfrad
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+wwsis
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+aeronet
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+aeronetv2
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+aeronetv3
+\begin_inset Quotes erd
+\end_inset
+
+, or 
+\begin_inset Quotes eld
+\end_inset
+
+python
+\begin_inset Quotes erd
+\end_inset
+
+.
  If passing in ISIS data, use the 
 \begin_inset Quotes eld
 \end_inset
@@ -3639,8 +3822,7 @@ surfrad
 \series bold
 -config file 
 \series medium
-option specifies the configuration file to generate summaries of the fields
- in the ASCII files.
+option is the configuration file for generating time summaries.
 \end_layout
 
 \begin_layout Description
@@ -3651,8 +3833,8 @@ option specifies the configuration file to generate summaries of the fields
 \series bold
 -mask_grid string
 \series medium
- option specifies a named grid or a gridded data file for filtering the
- point observations spatially.
+ option is a named grid or a gridded data file to filter the point observations
+ spatially.
 \end_layout
 
 \begin_layout Description
@@ -3660,13 +3842,10 @@ option specifies the configuration file to generate summaries of the fields
 \series medium
 6.
  The 
-\series default
--
 \series bold
-mask_poly file
+-mask_poly file
 \series medium
- option defines a polyline masking file for filtering the point observations
- spatially.
+ option is a polyline masking file to filter the point observations spatially.
 \end_layout
 
 \begin_layout Description
@@ -3678,7 +3857,7 @@ mask_poly file
 -mask_sid file|list 
 \series medium
 option is a station ID masking file or a comma-separated list of station
- ID's for filtering the point observations spatially.
+ ID's to filter the point observations spatially.
  See the description of the 
 \begin_inset Quotes eld
 \end_inset
@@ -3713,7 +3892,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -3755,7 +3934,7 @@ level
 \series default
  option indicates the desired level of compression (deflate level) for NetCDF
  variables.
- Tha valid level is between 0 and 9.
+ The valid level is between 0 and 9.
  The value of 
 \begin_inset Quotes eld
 \end_inset
@@ -3806,6 +3985,55 @@ sample_ascii_obs.nc
 .
 \end_layout
 
+\begin_layout Subsubsection
+Python Embedding for Point Observations
+\begin_inset CommandInset label
+LatexCommand label
+name "subsec:ascii2nc-pyembed"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here is an example of processing the same set of observations but using
+ Python embedding instead:
+\end_layout
+
+\begin_layout LyX-Code
+ascii2nc -format python 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+\begin_inset Quotes eld
+\end_inset
+
+MET_BASE/python/read_ascii_point.py sample_ascii_obs.txt" 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+sample_ascii_obs_python.nc
+\end_layout
+
+\begin_layout Standard
+Please refer to Appendix 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:App_F_Python_Embedding"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ for more details about Python embedding in MET.
+\end_layout
+
 \begin_layout Subsection
 ascii2nc configuration file
 \begin_inset CommandInset label
@@ -3831,7 +4059,7 @@ Ascii2NcConfig_default
 
 \begin_layout Standard
 The ASCII2NC configuration file is optional and only necessary when defining
- time summaries or message type mapping for litte_r data.
+ time summaries or message type mapping for little_r data.
 
 \series medium
  The contents of the default ASCII2NC configuration file are described below.
@@ -3884,74 +4112,8 @@ height "1pt"
 \begin_layout LyX-Code
 
 \series bold
-time_summary = {
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   flag       = FALSE;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   beg        = "000000";
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   end        = "235959";
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   step       = 300;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   width      = 600;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   grib_code  = [ 11, 204, 211 ];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   obs_var    = [];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   type       = [ "min", "max", "range", "mean", "stdev", "median", "p80"
- ];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   vld_freq   = 0;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   vld_thresh = 0.0;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-}
+time_summary = { ...
+ }
 \end_layout
 
 \begin_layout Standard
@@ -4170,7 +4332,8 @@ hskip 0.5in}
 
 \end_inset
 
-madis_file
+madis_file [madis_file2 ...
+ madis_filen]
 \end_layout
 
 \begin_layout LyX-Code
@@ -4401,7 +4564,7 @@ Required arguments for madis2nc
 \series bold
 madis_file
 \series medium
- argument indicates the name of the point observation file to be processed.
+ argument is one or more input MADIS point observation files to be processed.
 \end_layout
 
 \begin_layout Description
@@ -4412,7 +4575,7 @@ madis_file
 \series bold
 netcdf_file
 \series medium
- argument indicates the name given to the output NetCDF file.
+ argument is the NetCDF output file to be written.
 \end_layout
 
 \begin_layout Description
@@ -4423,8 +4586,8 @@ netcdf_file
 \series bold
 -type str
 \series medium
- specifies the type of MADIS observations (metar, raob, profiler, maritime,
- mesonet or acarsProfiles).
+ is type of MADIS observations (metar, raob, profiler, maritime, mesonet
+ or acarsProfiles).
 \end_layout
 
 \begin_layout Standard
@@ -4455,7 +4618,10 @@ option specifies the configuration file to generate summaries of the fields
 -qc_dd list
 \series medium
  option specifies a comma-separated list of QC flag values to be accepted
- (Z,C,S,V,X,Q,K,G,B).
+\begin_inset Newline newline
+\end_inset
+
+(Z,C,S,V,X,Q,K,G,B).
 \end_layout
 
 \begin_layout Description
@@ -4477,7 +4643,7 @@ option specifies the configuration file to generate summaries of the fields
 \series bold
 -rec_beg n
 \series medium
- specifies the index of the first MADIS record toprocess and 
+ specifies the index of the first MADIS record to process and 
 \series bold
 -rec_end n
 \series medium
@@ -4553,7 +4719,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -4595,7 +4761,7 @@ level
 \series default
  option specifies the desired level of compression (deflate level) for NetCDF
  variables.
- Tha valid level is between 0 and 9.
+ The valid level is between 0 and 9.
  Setting the compression level to 0 will make no compression for the NetCDF
  output.
  Lower number is for fast compression and higher number is for better compressio
@@ -4615,7 +4781,7 @@ madis2nc sample_madis_obs.nc
 \end_layout
 
 \begin_layout LyX-Code
-sample_madis_obs_met.nc -log madislog -v 3
+sample_madis_obs_met.nc -log madis.log -v 3
 \end_layout
 
 \begin_layout Standard
@@ -4630,8 +4796,8 @@ sample_madis_obs.nc
 sample_madis_obs_met.nc
 \series medium
 .
- Warnings and error messages will be written to the madislog file, and the
- verbosity will be level three.
+ Warnings and error messages will be written to the madis.log file, and the
+ verbosity level of logging is three.
 \end_layout
 
 \begin_layout Subsection
@@ -4712,74 +4878,8 @@ height "1pt"
 \begin_layout LyX-Code
 
 \series bold
-time_summary = {
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   flag       = FALSE;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   beg        = "000000";
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   end        = "235959";
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   step       = 300;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   width      = 600;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   grib_code  = [ 11, 204, 211 ];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   obs_var    = [];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   type       = [ "min", "max", "range", "mean", "stdev", "median", "p80"
- ];
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   vld_freq   = 0;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-   vld_thresh = 0.0;
-\end_layout
-
-\begin_layout LyX-Code
-
-\series bold
-}
+time_summary = { ...
+ }
 \end_layout
 
 \begin_layout Standard
@@ -4789,9 +4889,7 @@ The
 \series bold
 time_summary
 \series medium
- feature was implemented to allow additional processing of observations
- with high temporal resolution.
- This option is described in Section 
+ dictionary is described in Section 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "subsec:pb2nc-configuration-file"
@@ -4831,8 +4929,8 @@ LIDAR2NC tool
 \end_layout
 
 \begin_layout Standard
-The LIDAR2NC tool creates a NetCDF point observation file (similar to the
- output of ASCII2NC and PB2NC) from a CALIPSO HDF data file.
+The LIDAR2NC tool creates a NetCDF point observation file from a CALIPSO
+ HDF data file.
  Not all of the data present in the CALIPSO file is reproduced in the output,
  however.
  Instead, the output focuses mostly on information about clouds (as opposed
@@ -4940,7 +5038,7 @@ hskip 0.5in}
 \begin_layout Standard
 Unlike most of the MET tools, lidar2nc does not use a config file.
  Currently, the options needed to run lidar2nc are not complex enough to
- reqire one.
+ require one.
  
 \end_layout
 
@@ -4959,7 +5057,7 @@ Required arguments for lidar2nc
 \series bold
 lidar_file
 \series medium
- argument indicates the name of the input HDF lidar data file to be processed.
+ argument is the input HDF lidar data file to be processed.
  Currently, 
 \series default
 CALIPSO
@@ -4976,7 +5074,7 @@ CALIPSO
 \series bold
 out_file
 \series medium
- argument indicates the name of the output NetCDF file.
+ argument is the NetCDF output file to be written.
 \end_layout
 
 \begin_layout Standard
@@ -5002,7 +5100,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -5044,7 +5142,7 @@ The
 \series default
  option indicates the desired level of compression (deflate level) for NetCDF
  variables.
- Tha valid level is between 0 and 9.
+ The valid level is between 0 and 9.
  The value of 
 \begin_inset Quotes eld
 \end_inset
@@ -5674,7 +5772,12 @@ Point2Grid tool
 \begin_layout Standard
 The Point2Grid tool takes point observations from a NetCDF output file from
  one of the four previously mentioned MET tools (ascii2nc, madis2nc, pb2nc,
- lidar2nc) and creates a gridded NetCDF gridded file.
+ lidar2nc) and creates a gridded NetCDF file.
+ The other point observations are 
+\series medium
+GOES-16/17 input files in NetCDF format
+\series default
+ (especially, Aerosol Optical Depth.
  Future development will include support for reading input files not produced
  from MET tools.
 \end_layout
@@ -5870,7 +5973,7 @@ hskip 0.5in}
 
 \end_inset
 
-[-obs_thresh n]
+[-prob_cat_thresh n]
 \end_layout
 
 \begin_layout LyX-Code
@@ -5971,6 +6074,7 @@ input_filename
  argument indicates the name of the input NetCDF file to be processed.
  Currently, only NetCDF files produced from the ascii2nc, madis2nc, pb2nc,
  and lidar2nc are supported.
+ And AOD dataset from GOES16/17 are supported, too.
  Support for additional file types will be added in future releases.
 \end_layout
 
@@ -5993,6 +6097,27 @@ input_filename
 4.
  The -field string argument is a string that defines the data to be regridded.
  It may be used multiple times.
+ If -adp option is given (for AOD data from GOES16/17), the name consists
+ with the variable name from the input data file and the variable name from
+ ADP data file (for example, 
+\begin_inset Quotes eld
+\end_inset
+
+AOD_Smoke
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+AOD_Dust
+\begin_inset Quotes erd
+\end_inset
+
+: getting AOD variable from the input data and applying smoke or dust variable
+ from ADP data file).
+ 
 \end_layout
 
 \begin_layout Standard
@@ -6006,14 +6131,21 @@ Optional arguments for point2grid
 
 \series medium
 5.
- The -config file option uses the specified configuration file to generate
- gridded data.
+ The 
+\series bold
+-config
+\series medium
+ file option is the configuration file to be used.
 \end_layout
 
 \begin_layout Description
 6.
- The -qc flags option specifies a comma-separated list of quality control
- (QC) flags, for example 
+ The 
+\series bold
+-qc
+\series default
+ flags option specifies a comma-separated list of quality control (QC) flags,
+ for example 
 \begin_inset Quotes eld
 \end_inset
 
@@ -6035,56 +6167,103 @@ goes_imager_projection
 
 \begin_layout Description
 7.
- The -adp option specifies the Aerosol Detect Products (ADP) input data
- for Aersol Optical Depth (AOD) dataset (must be from GOES16/17 otherwise
- this option is ignored).
+ The 
+\series bold
+-adp adp_file_name
+\series default
+ option provides an additional Aerosol Detection Product (ADP) information
+ on aerosols, dust, and smoke.
+ This option is ignored if the requested variable is not AOD (
+\begin_inset Quotes eld
+\end_inset
+
+AOD_Dust
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+AOD_Smoke
+\begin_inset Quotes erd
+\end_inset
+
+) from GOES16/17.
+ The gridded data is filtered by the presence of dust/smoke.
+ If -qc options is given, it's applied to QC of dust/smoke, too (First filtering
+ with AOD QC values and the second filtering with dust/smoke QC values).
 \end_layout
 
 \begin_layout Description
 8.
- The -method type option specifies the regridding method.
+ The 
+\series bold
+-method type
+\series default
+ option specifies the regridding method.
  The default method is UW_MEAN.
 \end_layout
 
 \begin_layout Description
 9.
- The -gaussian_dx n option defines the 
+ The 
+\series bold
+-gaussian_dx n
+\series default
+ option defines the 
 \series medium
 distance interval for Gaussian smoothing.
- 8.
  
 \series default
 The default is 81.271 km.
+ Ignored if the method is not GAUSSIAN.
 \end_layout
 
 \begin_layout Description
 10.
- The -gaussain_radius n option defines the
+ The 
+\series bold
+-gaussain_radius n
+\series default
+ option defines the
 \series medium
  
 \series default
 radius of influence for Gaussian interpolation.
  The default is 120.
+ Ignored if the method is not GAUSSIAN.
 \end_layout
 
 \begin_layout Description
 11.
- The -obs_thresh n option sets the observation value to compute the probability
- of occurrence.
+ The 
+\series bold
+-prob_cat_thresh n
+\series default
+ option sets the threshold to compute the probability of occurrence.
  The default is set to disabled.
  This option is relevant when calculating practically perfect forecasts.
 \end_layout
 
 \begin_layout Description
 12.
- The -vld_thresh n option sets the required ratio of valid data for regridding.
+ The 
+\series bold
+-vld_thresh n
+\series default
+ option sets the required ratio of valid data for regridding.
  The default is 0.5.
 \end_layout
 
 \begin_layout Description
 13.
- The -name list option specifies a comma-separated list of output variable
- names for reach field specified.
+ The 
+\series bold
+-name list
+\series default
+ option specifies a comma-separated list of output variable names for reach
+ field specified.
  
 \end_layout
 
@@ -6104,7 +6283,7 @@ standard out and error
 .
  Thus, users can save the messages without having to redirect the output
  on the command line.
- The default behavior is no logfile.
+ The default behavior is no log file.
  
 \end_layout
 
@@ -6146,7 +6325,7 @@ The
 \series default
  option indicates the desired level of compression (deflate level) for NetCDF
  variables.
- Tha valid level is between 0 and 9.
+ The valid level is between 0 and 9.
  The value of 
 \begin_inset Quotes eld
 \end_inset
@@ -6161,6 +6340,70 @@ level
  output.
  Lower number is for fast compression and higher number is for better compressio
 n.
+\end_layout
+
+\begin_layout Standard
+For the GOES-16 and GOES-17 data, the computing lat/long is time consuming.
+ So the computed coordinate (lat/long) is saved into the NetCDF file to
+ the environment variable MET_TMP_DIR or /tmp if MET_TMP_DIR is not defined.
+ The computing lat/long step can be skipped if the coordinate file is given
+ through the environment variable MET_GEOSTATIONARY_DATA.
+ 
+\series medium
+An example of call point2grid to process GOES-16 AOD data is shown below:
+\end_layout
+
+\begin_layout LyX-Code
+point2grid 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+OR_ABI-L2-AODC-M3_G16_s20181341702215_e20181341704588_c20181341711418.nc
+ 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+G212 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+regrid_data_plane_GOES-16_AOD_TO_G212.nc 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+-field 'name="AOD"; level="(*,*)";' 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+-qc 0,1,2
+\end_layout
+
+\begin_layout LyX-Code
+-method MAX -v 1
+\end_layout
+
+\begin_layout Standard
+
+\series medium
+When processing GOES-16 data, the 
+\series bold
+-qc
+\series medium
+ option may also be used to specify the acceptable quality control flag
+ values.
+ The example above regrids the GOES-16 AOD values to NCEP Grid number 212
+ (which QC flags are high, medium, and low), writing to the output the maximum
+ AOD value falling inside each grid box.
 \end_layout
 
 \begin_layout Subsection
@@ -6222,7 +6465,7 @@ The point2grid tool will output a gridded NetCDF file containing the following:
 \begin_layout Standard
 6.
  The probability field which is the probability of the event defined by
- the line option -obs_thresh n occurring.
+ the line option -prob_cat_thresh n occurring.
  Ranges from 0 to 1.
  
 \end_layout
@@ -6263,7 +6506,7 @@ The point2grid tool will output a gridded NetCDF file containing the following:
 \begin_inset Quotes erd
 \end_inset
 
- meaniung that the probability value does exist.
+ meaning that the probability value does exist.
  
 \end_layout
 

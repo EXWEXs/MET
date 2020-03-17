@@ -1,5 +1,5 @@
-#LyX 2.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 508
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -21,6 +21,8 @@
 \font_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -51,6 +53,7 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_minted 0
 \index Index
 \shortcut idx
 \color #008000
@@ -63,7 +66,10 @@
 \tocdepth 3
 \paragraph_separation skip
 \defskip bigskip
-\quotes_language english
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -734,7 +740,7 @@ OBS_ERR_IN
 \begin_inset Text
 
 \begin_layout Plain Layout
-PrepBufr inverse observation error
+PrepBUFR inverse observation error
 \end_layout
 
 \end_inset
@@ -763,7 +769,7 @@ OBS_ERR_ADJ
 \begin_inset Text
 
 \begin_layout Plain Layout
-read_prepbufr inverse observation error
+read_PrepBUFR inverse observation error
 \end_layout
 
 \end_inset
@@ -821,7 +827,7 @@ PREP_USE
 \begin_inset Text
 
 \begin_layout Plain Layout
-read_prepbufr usage
+read_PrepBUFR usage
 \end_layout
 
 \end_inset
@@ -2076,9 +2082,11 @@ stat_analysis -lookin diag_conv_ges.mem001.stat
 \series medium
 In this example, the Stat-Analysis tool will read MPR lines from the input
  file named
-\series default
- 
 \series bold
+
+\begin_inset Newline newline
+\end_inset
+
 diag_conv_ges.mem001.stat
 \series default
 , retain only those lines where the 
@@ -2114,7 +2122,7 @@ This section describes how to run the tool gsidens2orank tool.
  The gsidens2orank tool processes an ensemble of GSI diagnostic files and
  reformats them into the MET observation rank (ORANK) line type, similar
  to the output of the Ensemble-Stat tool.
- The ORANK line type contains ensemble matched pair information and is anologous
+ The ORANK line type contains ensemble matched pair information and is analogous
  to the MPR line type for a deterministic model.
  The output ORANK data may be passed to the Stat-Analysis tool to compute
  ensemble statistics.
@@ -2506,7 +2514,7 @@ name "subsec:gsidens2orank-output"
 \series medium
 The gsidens2orank tool performs a simple reformatting step and thus requires
  no configuration file.
- The mulitple files passed to it are interpreted as members of the same
+ The multiple files passed to it are interpreted as members of the same
  ensemble.
  Therefore, each call to the tool processes exactly one ensemble.
  All input ensemble GSI diagnostic files must be of the same type.
@@ -2716,7 +2724,7 @@ PREP_USE
 \begin_inset Text
 
 \begin_layout Plain Layout
-read_prepbufr usage
+read_PrepBUFR usage
 \end_layout
 
 \end_inset
@@ -3651,7 +3659,7 @@ The gsidens2orank output may be passed to the Stat-Analysis tool to derive
 aggregate_stat
 \series default
  job type to read ORANK lines and ranked histograms (RHIST), probability
- integral transform historgrams (PHIST), and spread-skill variance output
+ integral transform histograms (PHIST), and spread-skill variance output
  (SSVAR).
  Stat-Analysis has been enhanced to parse any extra columns found at the
  end of the input lines.
@@ -3691,8 +3699,12 @@ stat_analysis -lookin diag_conv_ges_ens_mean_orank.txt
 \begin_layout Standard
 
 \series medium
-In this example, the Stat-Analysis tool will read ORANK lines from 
+In this example, the Stat-Analysis tool will read ORANK lines from
 \series bold
+
+\begin_inset Newline newline
+\end_inset
+
 diag_conv_ges_ens_mean_orank.txt
 \series default
 , retain only those lines where the 

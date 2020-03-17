@@ -24,10 +24,9 @@ using namespace std;
 #include "rmw_analysis.h"
 
 #include "vx_nc_util.h"
+#include "vx_tc_util.h"
 #include "vx_util.h"
 #include "vx_log.h"
-
-// #include "met_file.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -42,6 +41,11 @@ static void setup();
 static void process_files();
 static void normalize_stats();
 static void write_stats();
+static void process_track_file(const ConcatString&,
+    TrackInfoArray&);
+static bool is_keeper(const ATCFLineBase*);
+static void filter_tracks(TrackInfoArray&);
+static void read_nc_tracks(NcFile*);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -73,9 +77,27 @@ void usage() {
     cout << "\n*** Model Evaluation Tools (MET" << met_version
          << ") ***\n\n"
          << "Usage: " << program_name << "\n"
-         << "\t[-out file]\n"
+         << "\t-data file_1 ... file_n | data_file_list\n"
+         << "\t-config file\n"
+         << "\t-out file\n"
          << "\t[-log file]\n"
-         << "\t[-v level]\n\n" << flush;
+         << "\t[-v level]\n\n"
+
+         << "\twhere\t\"-data file_1 ... file_n | data_file_list\" "
+         << "is the NetCDF output of TC-RMW to be processed or an "
+         << "ASCII file containing a list of files (required).\n"
+
+         << "\t\t\"-config file\" is the RMWAnalysisConfig to be used "
+         << "(required).\n"
+
+         << "\t\t\"-out file\" is the NetCDF output file to be written "
+         << "(required).\n"
+
+         << "\t\t\"-log file\" outputs log messages to the specified "
+         << "file (optional).\n"
+
+         << "\t\t\"-v level\" overrides the default level of logging ("
+         << mlog.verbosity_level() << ") (optional).\n\n" << flush;
 
     exit(1);
 }
@@ -89,6 +111,9 @@ void process_command_line(int argc, char **argv) {
 
     // Default output directory
     out_dir = replace_path(default_out_dir);
+
+    // Print usage statement for no arguments
+    if(argc <= 1) usage();
 
     // Parse command line into tokens
     cline.set(argc, argv);
@@ -327,6 +352,14 @@ void process_files() {
         mlog << Debug(1) << "Number of track points "
              << n_track_point << "\n";
 
+        // Read track information
+        read_nc_tracks(nc_in);
+
+        // Filter tracks
+        filter_tracks(adeck_tracks);
+
+        if (adeck_tracks.n_tracks() > 0) {
+
         for(int i_var = 0; i_var < data_names.size(); i_var++) {
             NcVar var = get_nc_var(nc_in, data_names[i_var].c_str());
             mlog << Debug(2) << "Processing "
@@ -373,6 +406,7 @@ void process_files() {
                 }
             } // end loop over track points
         } // end loop over variables
+        } // end if have tracks
     } // end loop over files
 }
 
@@ -400,6 +434,8 @@ void write_stats() {
 
     // Create output file
     nc_out = open_ncfile(out_file.c_str(), true);
+
+    mlog << Debug(1) << "Writing output file: " << out_file << "\n";
 
     // Define dimensions
     range_dim = add_dim(nc_out, "range", n_range);
@@ -537,6 +573,165 @@ void write_stats() {
     }
 
     nc_out->close();
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void process_track_file(const ConcatString& filename,
+                        TrackInfoArray& tracks) {
+
+    int cur_read, cur_add;
+    LineDataFile f;
+    ConcatString cs;
+    ATCFTrackLine line;
+
+    // Initialize
+    tracks.clear();
+
+    // Open the file
+    if(!f.open(filename.c_str())) {
+        mlog << Error
+             << "\nprocess_track_file() -> "
+             << "unable to open file \""
+             << filename << "\"\n\n";
+        exit(1);
+    }
+
+    // Initialize counts
+    cur_read = cur_add = 0;
+
+    // Read each line in the file
+    while(f >> line) {
+        mlog << Debug(3) << line << "\n";
+
+        // Increment the line counts
+        cur_read++;
+
+        if(!is_keeper(&line)) continue;
+
+        // Attempt to add the current line to the TrackInfoArray
+        if(tracks.add(line, false, false)) {
+            cur_add++;
+        }
+    } // End while loop over lines
+
+    // Close the file
+    f.close();
+
+    // Dump out the track information
+    mlog << Debug(3)
+         << "Identified " << tracks.n_tracks() << " track(s).\n";
+
+    remove(adeck_source.c_str());
+
+    return;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+bool is_keeper(const ATCFLineBase* line) {
+    bool keep = true;
+
+    // Check model
+    if(conf_info.Model.n_elements() > 1 &&
+        !conf_info.Model.has(line->technique()))
+        keep = false;
+
+    // Check storm id
+    else if(conf_info.StormId.n_elements() > 1 &&
+            !has_storm_id(conf_info.StormId, line->basin(),
+                          line->cyclone_number(), line->warning_time()))
+        keep = false;
+
+    // Check basin
+    else if(conf_info.Basin.n_elements() > 1 &&
+            !conf_info.Basin.has(line->basin()))
+        keep = false;
+
+    // Check cyclone
+    else if(conf_info.Cyclone.n_elements() > 1 &&
+            !conf_info.Cyclone.has(line->cyclone_number()))
+        keep = false;
+
+    // Initialization time window
+    else if((conf_info.InitBeg > 1 &&
+             conf_info.InitBeg > line->warning_time()) ||
+            (conf_info.InitEnd > 1 &&
+             conf_info.InitEnd < line->warning_time()))
+        keep = false;
+
+    return keep;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void filter_tracks(TrackInfoArray& tracks) {
+
+    TrackInfoArray t = tracks;
+
+    // Initialize
+    tracks.clear();
+
+    // Loop over tracks
+    for(int i = 0; i < t.n_tracks(); i++) {
+        // Valid time window
+        if((conf_info.ValidBeg > 0 &&
+            conf_info.ValidBeg > t[i].valid_min()) ||
+           (conf_info.ValidEnd > 0 &&
+            conf_info.ValidEnd < t[i].valid_max())) {
+             mlog << Debug(4)
+                  << "Discarding track " << i+1
+                  << " for falling outside the "
+                  << "valid time window: "
+                  << unix_to_yyyymmdd_hhmmss(t[i].valid_min()) << " to "
+                  << unix_to_yyyymmdd_hhmmss(t[i].valid_max()) << "\n";
+            continue;
+        }
+
+        // Retain track
+        tracks.add(t[i]);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+void read_nc_tracks(NcFile* nc_in) {
+
+    mlog << Debug(3) << adeck_source << "\n";
+
+    ofstream f;
+    f.open(adeck_source.c_str());
+
+    adeck_tracks.clear();
+
+    NcDim track_line_dim;
+    get_dim(nc_in, "track_line", n_track_line, true);
+
+    mlog << Debug(3) << "Number of track lines "
+         << n_track_line << "\n";
+
+    NcVar track_lines_var = get_nc_var(nc_in, "TrackLines");
+
+    vector<size_t> counts;
+    vector<size_t> offsets;
+
+    for(int i = 0; i < n_track_line; i++) {
+        offsets.clear();
+        offsets.push_back(i);
+        counts.clear();
+        counts.push_back(1);
+
+        char* track_line_str;
+        track_lines_var.getVar(offsets, counts, &track_line_str);
+        ConcatString track_line(track_line_str);
+        mlog << Debug(3) << track_line << "\n";
+
+        f << track_line << "\n";
+    }
+    f.close();
+
+    adeck_tracks.clear();
+    process_track_file(adeck_source, adeck_tracks);
 }
 
 ////////////////////////////////////////////////////////////////////////
